@@ -11,7 +11,7 @@
 
 # Navi Mumbai Emergency Medical Supply Delivery & Route Optimization Platform
 
-![Navi Mumbai Medical Logistics Command Center](./docs/imgs/demo_screenshot.png)
+![Navi Mumbai Medical Logistics Command Center](./docs/imgs/demo_screenshot.jpeg)
 
 ## Overview
 
