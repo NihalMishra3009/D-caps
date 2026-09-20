@@ -4,7 +4,7 @@
 
 ![Solution Architecture](imgs/architecture.png)
 
-This project is a **serverless + ECS hybrid** system: an operator manages orders and master data through the web UI, external systems upload orders through an API, and the backend runs asynchronous batch optimization on an ECS-hosted dispatch engine. All resources are defined with AWS CDK and deployed as 5 CloudFormation stacks (see [`apps_infra/README.md`](../apps_infra/README.md#stack-architecture) for the full stack breakdown).
+This project is a **serverless + ECS hybrid** system: an operator manages orders and master data through the web UI, external systems upload orders through an API, and the backend runs asynchronous batch optimization on an ECS-hosted dispatch engine. All resources are defined with AWS CDK and deployed as 5 CloudFormation stacks (see [`README.md`](../README.md#3-cloud-infrastructure--aws-cdk-apps_infra) for the full stack breakdown).
 
 The diagram's components can be grouped into three areas.
 
