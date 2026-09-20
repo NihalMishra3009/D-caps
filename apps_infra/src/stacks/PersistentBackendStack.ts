@@ -50,7 +50,7 @@ export class PersistentBackendStack extends Stack {
     // ─── VPC ───────────────────────────────────────────────────────────────────
 
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      maxAzs: 2,
+      availabilityZones: ['ap-south-1a', 'ap-south-1b'],
       natGateways: 1,
       natGatewayProvider: ec2.NatProvider.gateway(),
       subnetConfiguration: [

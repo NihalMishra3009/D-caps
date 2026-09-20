@@ -26,6 +26,185 @@ import {
   Trash2,
 } from 'lucide-react'
 
+// Interface for canonical checkpoint structure
+export interface CheckpointItem {
+  id: string
+  sequence: number
+  name: string
+  address: string
+  latitude: number
+  longitude: number
+  type: 'warehouse' | 'destination'
+  status?: string
+  orderNo?: string
+  weightKg?: number
+  subtitle?: string
+}
+
+// Canonical Geographic Coordinates for all Navi Mumbai Checkpoints & Depots
+export const LOCATION_COORDINATES_MAP: Record<
+  string,
+  { lat: number; lng: number; name: string; address: string }
+> = {
+  // Depots
+  '95001200': {
+    lat: 19.06740,
+    lng: 73.02043,
+    name: 'Navi Mumbai Central Medical Distribution Hub',
+    address: 'MIDC Industrial Area, Turbhe, Navi Mumbai',
+  },
+  '95001300': {
+    lat: 19.0771,
+    lng: 72.9986,
+    name: 'Vashi Medical Cold-Chain Depot',
+    address: 'Sector 19, APMC Complex, Vashi, Navi Mumbai',
+  },
+  '95001400': {
+    lat: 18.9894,
+    lng: 73.1175,
+    name: 'Panvel Express Logistics Hub',
+    address: 'Old Mumbai-Pune Highway, Panvel, Navi Mumbai',
+  },
+
+  // Vehicle MH-46-OWN-101 Assigned Medical Checkpoints
+  '10000010': {
+    lat: 19.08354,
+    lng: 72.99902,
+    name: 'Fortis Hiranandani Hospital',
+    address: 'Sector 10A, Mini Sea Shore Rd, Vashi, Navi Mumbai',
+  },
+  '10000020': {
+    lat: 19.00600,
+    lng: 73.01762,
+    name: 'Apollo Hospitals Navi Mumbai',
+    address: 'Plot # 13, Parsik Hill Rd, Sector 23, CBD Belapur, Navi Mumbai',
+  },
+  '10000030': {
+    lat: 19.03509,
+    lng: 73.08192,
+    name: 'MGM Hospital & Research Centre',
+    address: 'Sector 3, Vashi / Belapur, Navi Mumbai',
+  },
+
+  // Vehicle MH-46-OWN-102 Assigned Medical Checkpoints
+  '10000040': {
+    lat: 19.0965,
+    lng: 73.01234,
+    name: 'Dhirubhai Ambani Life Science Centre',
+    address: 'Thane-Belapur Road, Kopar Khairane, Navi Mumbai',
+  },
+  '10000050': {
+    lat: 19.04349,
+    lng: 73.06455,
+    name: 'Tata ACTREC Cancer Research Centre',
+    address: 'Sector 22, Kharghar, Navi Mumbai',
+  },
+  '10000060': {
+    lat: 19.04133,
+    lng: 73.02262,
+    name: 'Terna Speciality Hospital & Research',
+    address: 'Sector 22, Phase II, Nerul West, Navi Mumbai',
+  },
+
+  // Vehicle MH-46-OWN-103 Assigned Medical Checkpoints
+  '10000070': {
+    lat: 19.0185,
+    lng: 73.0285,
+    name: 'Seawoods Advanced Diagnostics Institute',
+    address: 'Sector 40, Seawoods West, Navi Mumbai',
+  },
+  '10000080': {
+    lat: 19.04851,
+    lng: 73.07144,
+    name: 'Motherhood Hospital Kharghar',
+    address: 'Sector 7, Kharghar, Navi Mumbai',
+  },
+  '10000090': {
+    lat: 19.07268,
+    lng: 73.08154,
+    name: 'Lifeline Multispeciality Hospital',
+    address: 'Sector 36, Kamothe, Navi Mumbai',
+  },
+
+  // Vehicle MH-46-OWN-104 Assigned Medical Checkpoints
+  '10000100': {
+    lat: 18.9895,
+    lng: 73.1185,
+    name: 'Panvel Advanced Trauma Care Centre',
+    address: 'Near Orion Mall, Panvel, Navi Mumbai',
+  },
+  '10000110': {
+    lat: 19.0625,
+    lng: 73.00848,
+    name: 'Indravati Hospital & Research Centre',
+    address: 'Sector 3, Airoli, Navi Mumbai',
+  },
+  '10000120': {
+    lat: 19.08153,
+    lng: 73.00346,
+    name: 'Surya Diagnostic & Healthcare Clinic',
+    address: 'Sector 8, Ghansoli, Navi Mumbai',
+  },
+
+  // Vehicle MH-46-OWN-105 Assigned Medical Checkpoints
+  '10000130': {
+    lat: 19.0325,
+    lng: 73.01455,
+    name: 'Millennium Care Diagnostic Hub',
+    address: 'Sector 4, Sanpada, Navi Mumbai',
+  },
+  '10000140': {
+    lat: 19.05651,
+    lng: 73.01892,
+    name: 'Juinagar Community Healthcare Centre',
+    address: 'Sector 23, Juinagar East, Navi Mumbai',
+  },
+  '10000150': {
+    lat: 19.03045,
+    lng: 73.10408,
+    name: 'Metro Hospital & Emergency Centre',
+    address: 'Sector 1E, Kalamboli, Navi Mumbai',
+  },
+  '10000160': {
+    lat: 19.1362,
+    lng: 73.0075,
+    name: 'Rabale Industrial Health Clinic',
+    address: 'Sector 8, MIDC Rabale, Navi Mumbai',
+  },
+}
+
+// Default Vehicle Assigned Stops Mapping
+const VEHICLE_DEFAULT_STOPS_MAP: Record<
+  string,
+  Array<{ code: string; status: 'Complete' | 'On Delivery' | 'Scheduled' | 'Pending'; weightKg: number; subtitle: string }>
+> = {
+  'MH-46-OWN-101': [
+    { code: '10000010', status: 'On Delivery', weightKg: 500, subtitle: 'Emergency • On Delivery' },
+    { code: '10000020', status: 'Scheduled', weightKg: 620, subtitle: 'Scheduled' },
+    { code: '10000030', status: 'Scheduled', weightKg: 480, subtitle: 'Scheduled' },
+  ],
+  'MH-46-OWN-102': [
+    { code: '10000040', status: 'On Delivery', weightKg: 750, subtitle: 'Emergency • On Delivery' },
+    { code: '10000050', status: 'Scheduled', weightKg: 850, subtitle: 'Scheduled' },
+    { code: '10000060', status: 'Scheduled', weightKg: 600, subtitle: 'Scheduled' },
+  ],
+  'MH-46-OWN-103': [
+    { code: '10000070', status: 'On Delivery', weightKg: 410, subtitle: 'Emergency • On Delivery' },
+    { code: '10000080', status: 'Scheduled', weightKg: 530, subtitle: 'Scheduled' },
+    { code: '10000090', status: 'Scheduled', weightKg: 1100, subtitle: 'Scheduled' },
+  ],
+  'MH-46-OWN-104': [
+    { code: '10000100', status: 'On Delivery', weightKg: 1400, subtitle: 'Emergency • On Delivery' },
+    { code: '10000110', status: 'Scheduled', weightKg: 850, subtitle: 'Scheduled' },
+    { code: '10000120', status: 'Scheduled', weightKg: 720, subtitle: 'Scheduled' },
+  ],
+  'MH-46-OWN-105': [
+    { code: '10000130', status: 'On Delivery', weightKg: 640, subtitle: 'Emergency • On Delivery' },
+    { code: '10000140', status: 'Scheduled', weightKg: 580, subtitle: 'Scheduled' },
+    { code: '10000150', status: 'Scheduled', weightKg: 920, subtitle: 'Scheduled' },
+  ],
+}
+
 export const Details: React.FC = () => {
   const navigate = useNavigate()
   const { vehicleId } = useParams<{ vehicleId: string }>()
@@ -38,6 +217,7 @@ export const Details: React.FC = () => {
   const [mapMode, setMapMode] = useState<'2d' | '3d'>('2d')
   const [deliveryJobs, setDeliveryJobs] = useState<any[]>([])
   const [showActionsMenu, setShowActionsMenu] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -61,67 +241,137 @@ export const Details: React.FC = () => {
     return deliveryJobs.find((j) => String(j.carNo) === String(currentItem.carNo))
   }, [deliveryJobs, currentItem])
 
+  // Single Source of Truth: Canonical Checkpoints Array
+  const checkpoints: CheckpointItem[] = useMemo(() => {
+    const depotCode = currentItem?.warehouseCode || '95001200'
+    const depotInfo = LOCATION_COORDINATES_MAP[depotCode] || {
+      lat: 19.06740,
+      lng: 73.02043,
+      name: 'Navi Mumbai Central Medical Distribution Hub',
+      address: 'MIDC Industrial Area, Turbhe, Navi Mumbai',
+    }
+
+    const list: CheckpointItem[] = [
+      {
+        id: depotCode,
+        sequence: 0,
+        name: depotInfo.name,
+        address: depotInfo.address,
+        latitude: depotInfo.lat,
+        longitude: depotInfo.lng,
+        type: 'warehouse',
+        subtitle: 'Depot Hub (Origin & Return)',
+      },
+    ]
+
+    const carNo = currentItem?.carNo || 'MH-46-OWN-101'
+
+    if (matchedJob && Array.isArray(matchedJob.segments) && matchedJob.segments.length > 1) {
+      const stopSegments = matchedJob.segments.filter(
+        (s: any) =>
+          s.deliveryCode &&
+          s.deliveryCode !== 'WAREHOUSE' &&
+          s.deliveryCode !== matchedJob.warehouseCode &&
+          s.deliveryCode !== depotCode
+      )
+
+      stopSegments.forEach((s: any, idx: number) => {
+        const code = String(s.deliveryCode)
+        const mapped = LOCATION_COORDINATES_MAP[code]
+        const lat = Number(mapped?.lat ?? s.latitude ?? s.from?.latitude ?? s.from?.lat ?? 19.076)
+        const lng = Number(mapped?.lng ?? s.longitude ?? s.from?.longitude ?? s.from?.long ?? 73.003)
+
+        list.push({
+          id: code,
+          sequence: idx + 1,
+          name: mapped?.name || s.deliveryName || `Hospital ${code}`,
+          address: mapped?.address || s.address || 'Navi Mumbai',
+          latitude: lat,
+          longitude: lng,
+          type: 'destination',
+          orderNo: code,
+          status: idx === 0 ? 'On Delivery' : idx === stopSegments.length - 1 ? 'Complete' : 'Scheduled',
+          weightKg: Number(s.demands || 500),
+          subtitle: idx === 0 ? 'Emergency • On Delivery' : `Consignment #${code}`,
+        })
+      })
+    } else {
+      const defaultStops = VEHICLE_DEFAULT_STOPS_MAP[carNo] || VEHICLE_DEFAULT_STOPS_MAP['MH-46-OWN-101']
+      defaultStops.forEach((st, idx) => {
+        const mapped = LOCATION_COORDINATES_MAP[st.code]
+        list.push({
+          id: st.code,
+          sequence: idx + 1,
+          name: mapped?.name || `Hospital ${st.code}`,
+          address: mapped?.address || 'Navi Mumbai',
+          latitude: mapped?.lat ?? 19.076,
+          longitude: mapped?.lng ?? 73.003,
+          type: 'destination',
+          orderNo: st.code,
+          status: st.status,
+          weightKg: st.weightKg,
+          subtitle: st.subtitle,
+        })
+      })
+    }
+
+    // Preserve checkpoint sequence strictly
+    list.sort((a, b) => a.sequence - b.sequence)
+    return list
+  }, [currentItem, matchedJob])
+
+  // Debugging requirement: console.table of checkpoints
+  useEffect(() => {
+    if (checkpoints && checkpoints.length > 0) {
+      console.table(
+        checkpoints.map((point) => ({
+          id: point.id,
+          sequence: point.sequence,
+          name: point.name,
+          latitude: point.latitude,
+          longitude: point.longitude,
+        }))
+      )
+    }
+  }, [checkpoints])
+
   const maxCapacity = Number(currentItem?.maxWeight || 20000)
   const currentLoad = matchedJob ? Number(matchedJob.loadCapacity || 18400) : 18400
   const remainingCapacity = Math.max(0, maxCapacity - currentLoad)
   const utilPct = maxCapacity > 0 ? Math.round((currentLoad / maxCapacity) * 100) : 82
-  const assignedDropsCount = matchedJob && Array.isArray(matchedJob.segments) ? matchedJob.segments.length - 1 : 4
+  const assignedDropsCount = checkpoints.filter((c) => c.sequence > 0).length
   const timeGroup = matchedJob?.deliveryTimeGroup || '01'
   const isInactive = currentItem ? currentItem.carNo.includes('99') || currentItem.carNo.includes('INA') : false
 
-  // Assigned Orders List
+  // Assigned Orders List derived directly from canonical checkpoints
   const assignedOrders: FleetOrderItem[] = useMemo(() => {
-    if (matchedJob && Array.isArray(matchedJob.segments)) {
-      return matchedJob.segments
-        .filter((s: any) => s.deliveryCode && s.deliveryCode !== 'WAREHOUSE' && s.deliveryCode !== matchedJob.warehouseCode)
-        .map((s: any, idx: number) => ({
-          id: `seg-${idx}-${s.deliveryCode}`,
-          orderNo: s.deliveryCode || `ORD-983${idx}`,
-          customerName: s.deliveryName || `Hospital ${s.deliveryCode}`,
-          locationAddress: s.address || 'Navi Mumbai',
-          weightKg: Number(s.demands || 500),
-          status: idx === 0 ? 'On Delivery' : idx === 3 ? 'Complete' : 'Scheduled',
-          latitude: Number(s.to?.latitude ?? s.latitude ?? 19.076),
-          longitude: Number(s.to?.longitude ?? s.longitude ?? 73.003),
-        }))
-    }
+    return checkpoints
+      .filter((cp) => cp.sequence > 0)
+      .map((cp) => ({
+        id: cp.id,
+        orderNo: cp.orderNo || cp.id,
+        customerName: cp.name,
+        locationAddress: cp.address,
+        weightKg: cp.weightKg || 500,
+        status: (cp.status as any) || 'Scheduled',
+        latitude: cp.latitude,
+        longitude: cp.longitude,
+      }))
+  }, [checkpoints])
 
-    return [
-      { id: '1', orderNo: '9836', customerName: 'Fortis Hiranandani', locationAddress: 'Vashi', weightKg: 500, status: 'On Delivery' },
-      { id: '2', orderNo: '1780', customerName: 'Apollo Hospitals', locationAddress: 'Belapur', weightKg: 620, status: 'Scheduled' },
-      { id: '3', orderNo: '6824', customerName: 'MGM Hospital', locationAddress: 'Kharghar', weightKg: 480, status: 'Scheduled' },
-      { id: '4', orderNo: '9102', customerName: 'Tata ACTREC', locationAddress: 'Nerul', weightKg: 500, status: 'Complete' },
-    ]
-  }, [matchedJob])
-
-  // Map Markers
+  // Map Markers derived directly from canonical checkpoints
   const mapMarkers: MapMarkerItem[] = useMemo(() => {
-    const list: MapMarkerItem[] = [
-      {
-        id: 'depot-origin',
-        latitude: Number(matchedJob?.segments?.[0]?.from?.latitude ?? 19.0674),
-        longitude: Number(matchedJob?.segments?.[0]?.from?.longitude ?? 73.0205),
-        title: 'Depot 95001200',
-        subtitle: 'Navi Mumbai Central Hub',
-        type: 'warehouse',
-      },
-    ]
-
-    assignedOrders.forEach((ord: any, idx) => {
-      const defaultLats = [19.076, 19.019, 19.043, 19.028]
-      const defaultLngs = [73.003, 73.038, 73.067, 73.018]
-      list.push({
-        id: `stop-${ord.id}`,
-        latitude: ord.latitude || defaultLats[idx % defaultLats.length],
-        longitude: ord.longitude || defaultLngs[idx % defaultLngs.length],
-        title: ord.customerName,
-        subtitle: `#${ord.orderNo}`,
-        type: 'destination',
-      })
-    })
-
-    return list
-  }, [matchedJob, assignedOrders])
+    return checkpoints.map((cp) => ({
+      id: cp.id,
+      latitude: cp.latitude,
+      longitude: cp.longitude,
+      title: cp.name,
+      subtitle: cp.subtitle || cp.address,
+      sequence: cp.sequence,
+      type: cp.type,
+      data: cp,
+    }))
+  }, [checkpoints])
 
   // Route Coordinates (Road Following)
   const routeCoordinates = useMemo<[number, number][]>(() => {
@@ -150,13 +400,16 @@ export const Details: React.FC = () => {
       }
     }
 
-    // 3. Fallback: connect stops
-    if (mapMarkers && mapMarkers.length >= 2) {
-      return mapMarkers.map((m) => [m.longitude, m.latitude])
+    // 3. Fallback: connect checkpoints directly from depot -> stop 1 -> stop 2 -> stop 3 -> depot
+    if (checkpoints && checkpoints.length >= 2) {
+      const pts: [number, number][] = checkpoints.map((cp) => [cp.longitude, cp.latitude])
+      // Return to origin depot
+      pts.push([checkpoints[0].longitude, checkpoints[0].latitude])
+      return pts
     }
 
     return []
-  }, [matchedJob, currentItem, mapMarkers])
+  }, [matchedJob, currentItem, checkpoints])
 
   // 2D Standard Routes
   const standardRoutes = useMemo<StandardRouteItem[]>(() => {
@@ -638,11 +891,15 @@ export const Details: React.FC = () => {
                 markers={mapMarkers}
                 routes={standardRoutes}
                 height={340}
+                selectedMarkerId={selectedOrderId}
+                onSelectMarker={(m) => setSelectedOrderId(String(m.id))}
               />
             ) : (
               <Interactive3DMap
                 markers={mapMarkers}
                 polylines={mapPolylines}
+                selectedMarkerId={selectedOrderId}
+                onSelectMarker={(m) => setSelectedOrderId(String(m.id))}
                 center={[73.0297, 19.033]}
                 zoom={13.2}
                 pitch={55}
@@ -655,10 +912,12 @@ export const Details: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Assigned Orders (4) */}
+        {/* Right: Assigned Orders */}
         <div>
           <FleetOrderList
             orders={assignedOrders}
+            selectedOrderId={selectedOrderId}
+            onSelectOrder={(ord) => setSelectedOrderId(ord.id)}
             title={`ASSIGNED ORDERS (${assignedOrders.length})`}
           />
         </div>

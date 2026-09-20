@@ -41,8 +41,8 @@ echo "Using JAVA_HOME=$JAVA_HOME ($JAVA_VERSION_OUT)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-OSM_SRC="${OSM_FILE:-$HOME/.graphhopper/openstreetmap/south-korea-latest.osm.pbf}"
-OSM_URL="${OSM_URL:-https://download.geofabrik.de/asia/south-korea-latest.osm.pbf}"
+OSM_SRC="${OSM_FILE:-$HOME/.graphhopper/openstreetmap/western-zone-latest.osm.pbf}"
+OSM_URL="${OSM_URL:-https://download.geofabrik.de/asia/india/western-zone-latest.osm.pbf}"
 
 # Download OSM file from Geofabrik if it does not exist locally.
 # If OSM_SRC already exists, it is reused as-is (no re-download).
@@ -93,5 +93,5 @@ mkdir -p build/nextday-delivery
 cp apps/nextday-delivery/build/libs/delivery-dispatch.jar build/nextday-delivery/
 cp apps/nextday-delivery/src/main/resources/solver-config.xml build/nextday-delivery/
 cp scripts/Dockerfile.nextdaydelivery build/nextday-delivery/Dockerfile
-cp "$OSM_SRC" build/nextday-delivery/south-korea-latest.osm.pbf
-echo "OSM file bundled into build/nextday-delivery/south-korea-latest.osm.pbf"
+cp "$OSM_SRC" build/nextday-delivery/western-zone-latest.osm.pbf
+echo "OSM file bundled into build/nextday-delivery/western-zone-latest.osm.pbf"

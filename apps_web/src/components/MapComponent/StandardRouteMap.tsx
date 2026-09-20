@@ -21,12 +21,16 @@ export interface StandardMarkerItem {
   longitude: number
   title: string
   subtitle?: string
+  sequence?: number
   type: 'warehouse' | 'customer' | 'origin' | 'destination' | 'vehicle'
+  data?: any
 }
 
 export interface StandardRouteMapProps {
   markers?: StandardMarkerItem[]
   routes?: StandardRouteItem[]
+  selectedMarkerId?: string | number | null
+  onSelectMarker?: (marker: StandardMarkerItem) => void
   center?: [number, number] // [lat, lng]
   zoom?: number
   height?: number | string
@@ -59,29 +63,29 @@ const createDepotIcon = (name: string, withLabel = true) => {
 }
 
 // Customer Delivery Stop Marker (Purple pin with person icon matching reference image)
-const createCustomerIcon = (name: string, seq?: number, withLabel = true) => {
+const createCustomerIcon = (name: string, seq?: number, withLabel = true, isSelected = false) => {
   const safeName = (name || `Stop ${seq || ''}`).replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const pinBg = isSelected ? '#0284c7' : '#a855f7'
+  const seqDisplay = seq !== undefined ? (seq === 0 ? 'D' : `${seq}`) : ''
   return L.divIcon({
     html: `
       <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto; white-space: nowrap; transform: translate(-16px, -32px);">
-        <div style="background-color: #a855f7; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.35); border: 2px solid white;">
-          <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
+        <div style="background-color: ${pinBg}; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.35); border: 2px solid white;">
+          <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px; color: #ffffff;">
+            ${seqDisplay || `<svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>`}
           </div>
         </div>
         ${
           withLabel
-            ? `<span style="background: rgba(255,255,255,0.96); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid #cbd5e1;">
-                ${safeName}
+            ? `<span style="background: rgba(255,255,255,0.96); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1.5px solid ${isSelected ? '#0284c7' : '#cbd5e1'};">
+                ${seq !== undefined && seq > 0 ? `Stop ${seq}: ` : ''}${safeName}
               </span>`
             : ''
         }
       </div>
     `,
     className: 'custom-customer-marker',
-    iconSize: withLabel ? [150, 34] : [34, 34],
+    iconSize: withLabel ? [160, 34] : [34, 34],
     iconAnchor: [16, 32],
   })
 }
@@ -141,6 +145,8 @@ const MapBoundsFitter: React.FC<{
 export const StandardRouteMap: React.FC<StandardRouteMapProps> = ({
   markers = [],
   routes = [],
+  selectedMarkerId = null,
+  onSelectMarker,
   center = [19.033, 73.0297], // Navi Mumbai [lat, lng]
   zoom = 12,
   height = 500,
@@ -207,41 +213,65 @@ export const StandardRouteMap: React.FC<StandardRouteMapProps> = ({
         })}
 
         {/* Origin / Depot Hub Markers (Red House) */}
-        {depots.map((d, idx) => (
-          <Marker
-            key={`depot-${d.id || idx}`}
-            position={[d.latitude, d.longitude]}
-            icon={createDepotIcon(d.title, true)}
-          >
-            <Popup>
-              <div>
-                <h4 style={{ margin: '0 0 4px 0', color: '#ef4444' }}>{d.title}</h4>
-                <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{d.subtitle || 'Distribution Depot Hub'}</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {depots.map((d, idx) => {
+          return (
+            <Marker
+              key={`depot-${d.id || idx}`}
+              position={[d.latitude, d.longitude]}
+              icon={createDepotIcon(d.title, true)}
+              eventHandlers={{
+                click: () => onSelectMarker && onSelectMarker(d),
+              }}
+            >
+              <Popup>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase' }}>
+                    DEPOT HUB
+                  </div>
+                  <h4 style={{ margin: '2px 0 4px 0', color: '#ef4444' }}>{d.title}</h4>
+                  <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{d.subtitle || 'Distribution Depot Hub'}</p>
+                </div>
+              </Popup>
+            </Marker>
+          )
+        })}
 
         {/* Customer Stop Markers (Purple Pins with Labels) */}
-        {customers.map((c, idx) => (
-          <Marker
-            key={`cust-${c.id || idx}`}
-            position={[c.latitude, c.longitude]}
-            icon={createCustomerIcon(c.title, idx + 1, showPermanentLabels)}
-          >
-            {!showPermanentLabels && (
-              <Tooltip direction='top' offset={[0, -28]}>
-                <strong>{c.title}</strong>
-              </Tooltip>
-            )}
-            <Popup>
-              <div>
-                <h4 style={{ margin: '0 0 4px 0', color: '#9333ea' }}>{c.title}</h4>
-                <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{c.subtitle || 'Delivery Destination'}</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {customers.map((c, idx) => {
+          const isSelected =
+            selectedMarkerId &&
+            (String(c.id) === String(selectedMarkerId) ||
+              (c.data &&
+                (String(c.data.orderNo) === String(selectedMarkerId) ||
+                  String(c.data.deliveryCode) === String(selectedMarkerId) ||
+                  String(c.data.id) === String(selectedMarkerId))))
+          const seq = c.sequence ?? idx + 1
+          return (
+            <Marker
+              key={`cust-${c.id || idx}`}
+              position={[c.latitude, c.longitude]}
+              icon={createCustomerIcon(c.title, seq, showPermanentLabels, Boolean(isSelected))}
+              eventHandlers={{
+                click: () => onSelectMarker && onSelectMarker(c),
+              }}
+            >
+              {!showPermanentLabels && (
+                <Tooltip direction='top' offset={[0, -28]}>
+                  <strong>{c.title}</strong>
+                </Tooltip>
+              )}
+              <Popup>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#9333ea', textTransform: 'uppercase' }}>
+                    {c.sequence === 0 ? 'Depot Hub' : `Stop ${seq}`}
+                  </div>
+                  <h4 style={{ margin: '2px 0 4px 0', color: '#9333ea' }}>{c.title}</h4>
+                  <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{c.subtitle || 'Delivery Destination'}</p>
+                </div>
+              </Popup>
+            </Marker>
+          )
+        })}
       </MapContainer>
     </div>
   )

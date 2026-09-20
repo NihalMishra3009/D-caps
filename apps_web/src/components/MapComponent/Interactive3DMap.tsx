@@ -20,6 +20,7 @@ export interface MapMarkerItem {
   longitude: number
   title: string
   subtitle?: string
+  sequence?: number
   type: 'warehouse' | 'customer' | 'destination' | 'origin' | 'vehicle'
   data?: any
 }
@@ -31,6 +32,8 @@ export interface Interactive3DMapProps {
     color?: string
     id?: string
   }[]
+  selectedMarkerId?: string | number | null
+  onSelectMarker?: (marker: MapMarkerItem) => void
   center?: [number, number] // [lng, lat]
   zoom?: number
   pitch?: number
@@ -135,6 +138,8 @@ const GLOBAL_HYBRID_3D_STYLE: maplibregl.StyleSpecification = {
 export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
   markers = [],
   polylines = [],
+  selectedMarkerId = null,
+  onSelectMarker,
   center = [73.0297, 19.033], // Navi Mumbai [lng, lat]
   zoom = 15.5,
   pitch = 65,
@@ -154,6 +159,30 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerItem | null>(null)
   const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+
+  // Synchronize internal selectedMarker with selectedMarkerId prop
+  useEffect(() => {
+    if (!selectedMarkerId) return
+    const found = markers.find(
+      (m) =>
+        String(m.id) === String(selectedMarkerId) ||
+        (m.data &&
+          (String(m.data.orderNo) === String(selectedMarkerId) ||
+            String(m.data.deliveryCode) === String(selectedMarkerId) ||
+            String(m.data.id) === String(selectedMarkerId)))
+    )
+    if (found) {
+      setSelectedMarker(found)
+      if (mapRef.current) {
+        mapRef.current.flyTo({
+          center: [found.longitude, found.latitude],
+          zoom: 16.5,
+          duration: 900,
+          essential: true,
+        })
+      }
+    }
+  }, [selectedMarkerId, markers])
 
   // Initialize MapLibre Earth & 3D Building Engine
   useEffect(() => {
@@ -209,7 +238,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
   const activeLayerIdsRef = useRef<string[]>([])
   const activeSourceIdsRef = useRef<string[]>([])
 
-  // 1. Immediately Render DOM Markers & Fit Bounds (Instant — does NOT wait for remote vector/satellite tiles)
+  // 1. Immediately Render DOM Markers & Fit Bounds
   useEffect(() => {
     if (!mapInstance) return
 
@@ -248,7 +277,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
       })
     } else if (!bounds.isEmpty()) {
       mapInstance.fitBounds(bounds, {
-        padding: { top: 70, bottom: 70, left: 70, right: 70 },
+        padding: { top: 60, bottom: 60, left: 60, right: 60 },
         maxZoom: 15,
         duration: 800,
       })
@@ -265,10 +294,58 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
       const isDest = marker.type === 'destination'
       const isOrg = marker.type === 'origin'
 
+      const isSelected =
+        selectedMarkerId &&
+        (String(marker.id) === String(selectedMarkerId) ||
+          (marker.data &&
+            (String(marker.data.orderNo) === String(selectedMarkerId) ||
+              String(marker.data.deliveryCode) === String(selectedMarkerId) ||
+              String(marker.data.id) === String(selectedMarkerId))))
+
       const badgeColor = isWh ? '#ef4444' : isOrg ? '#10b981' : isDest ? '#0284c7' : '#a855f7'
+
+      const seqNumber = marker.sequence !== undefined ? marker.sequence : undefined
+      const seqLabel = seqNumber === 0 ? 'DEPOT' : seqNumber !== undefined ? `Stop ${seqNumber}` : isWh ? 'DEPOT' : 'STOP'
 
       el.innerHTML = `
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: auto;">
+          <!-- Hover / Active Tooltip -->
+          <div class="marker-hover-popup" style="
+            position: absolute;
+            bottom: calc(100% + 10px);
+            display: ${isSelected ? 'flex' : 'none'};
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            z-index: 100;
+            transition: all 0.2s ease;
+          ">
+            <div style="
+              background: rgba(10, 18, 36, 0.96);
+              border: 1.5px solid ${badgeColor};
+              border-radius: 8px;
+              padding: 6px 12px;
+              box-shadow: 0 4px 20px rgba(0,0,0,0.85);
+              text-align: center;
+              white-space: nowrap;
+            ">
+              <div style="font-size: 10px; font-weight: 800; color: ${badgeColor}; text-transform: uppercase; letter-spacing: 0.5px;">
+                ${seqLabel}
+              </div>
+              <div style="font-size: 12px; font-weight: 700; color: #ffffff; margin-top: 1px;">
+                ${marker.title}
+              </div>
+              ${marker.subtitle ? `<div style="font-size: 10px; color: #94a3b8; margin-top: 1px;">${marker.subtitle}</div>` : ''}
+            </div>
+            <div style="
+              width: 0;
+              height: 0;
+              border-left: 5px solid transparent;
+              border-right: 5px solid transparent;
+              border-top: 6px solid ${badgeColor};
+            "></div>
+          </div>
+
           <!-- Pulsing Beacon Halo -->
           <div style="
             position: absolute;
@@ -276,8 +353,8 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            border: 2px solid ${badgeColor};
-            box-shadow: 0 0 16px ${badgeColor}, inset 0 0 8px ${badgeColor};
+            border: 2px solid ${isSelected ? '#38bdf8' : badgeColor};
+            box-shadow: 0 0 16px ${isSelected ? '#38bdf8' : badgeColor}, inset 0 0 8px ${isSelected ? '#38bdf8' : badgeColor};
             animation: tacticalPulse 2s infinite ease-in-out;
             pointer-events: none;
           "></div>
@@ -287,10 +364,10 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 12px;
-            background: rgba(10, 18, 36, 0.96);
-            border: 1.5px solid ${badgeColor};
-            box-shadow: 0 0 16px ${badgeColor}88, 0 6px 14px rgba(0,0,0,0.8);
+            padding: 5px 12px 5px 6px;
+            background: ${isSelected ? 'rgba(15, 23, 42, 0.98)' : 'rgba(10, 18, 36, 0.96)'};
+            border: ${isSelected ? '2px solid #38bdf8' : `1.5px solid ${badgeColor}`};
+            box-shadow: ${isSelected ? '0 0 24px #38bdf8, 0 6px 16px rgba(0,0,0,0.9)' : `0 0 16px ${badgeColor}88, 0 6px 14px rgba(0,0,0,0.8)`};
             border-radius: 18px;
             color: #ffffff;
             font-family: system-ui, -apple-system, sans-serif;
@@ -299,7 +376,17 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
             letter-spacing: 0.3px;
             transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             white-space: nowrap;
+            transform: ${isSelected ? 'scale(1.12)' : 'scale(1)'};
           " class="marker-pill">
+            <span style="
+              background: ${badgeColor};
+              color: #ffffff;
+              font-size: 9.5px;
+              font-weight: 800;
+              padding: 2px 6px;
+              border-radius: 10px;
+              letter-spacing: 0.4px;
+            ">${seqLabel}</span>
             <span>${marker.title}</span>
             <div style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor}; box-shadow: 0 0 8px ${badgeColor};"></div>
           </div>
@@ -310,7 +397,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
             height: 0;
             border-left: 6px solid transparent;
             border-right: 6px solid transparent;
-            border-top: 8px solid ${badgeColor};
+            border-top: 8px solid ${isSelected ? '#38bdf8' : badgeColor};
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
           "></div>
         </div>
@@ -318,29 +405,40 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
 
       el.addEventListener('mouseenter', () => {
         const pill = el.querySelector('.marker-pill') as HTMLElement
+        const popup = el.querySelector('.marker-hover-popup') as HTMLElement
         if (pill) {
-          pill.style.transform = 'scale(1.1)'
+          pill.style.transform = 'scale(1.12)'
           pill.style.borderColor = '#ffffff'
+        }
+        if (popup) {
+          popup.style.display = 'flex'
         }
       })
 
       el.addEventListener('mouseleave', () => {
         const pill = el.querySelector('.marker-pill') as HTMLElement
+        const popup = el.querySelector('.marker-hover-popup') as HTMLElement
         if (pill) {
-          pill.style.transform = 'scale(1)'
-          pill.style.borderColor = badgeColor
+          pill.style.transform = isSelected ? 'scale(1.12)' : 'scale(1)'
+          pill.style.borderColor = isSelected ? '#38bdf8' : badgeColor
+        }
+        if (popup && !isSelected) {
+          popup.style.display = 'none'
         }
       })
 
       el.addEventListener('click', (e) => {
         e.stopPropagation()
         setSelectedMarker(marker)
+        if (onSelectMarker) {
+          onSelectMarker(marker)
+        }
         mapInstance.flyTo({
           center: [marker.longitude, marker.latitude],
           zoom: 17,
           pitch: 65,
           bearing: -20,
-          duration: 1200,
+          duration: 1000,
           essential: true,
         })
       })
@@ -351,7 +449,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
 
       markerElementsRef.current.push(mapMarker)
     })
-  }, [mapInstance, markers, polylines])
+  }, [mapInstance, markers, polylines, selectedMarkerId, onSelectMarker])
 
   // 2. Sync WebGL Route Polylines onto Real Earth Coordinates
   useEffect(() => {
@@ -668,13 +766,38 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
             borderRadius: 12,
             padding: '14px 18px',
             boxShadow: '0 10px 40px rgba(0,0,0,0.85)',
-            maxWidth: 340,
+            maxWidth: 360,
             color: '#f8fafc',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <strong style={{ fontSize: '0.9rem', color: '#38bdf8' }}>{selectedMarker.title}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                style={{
+                  background:
+                    selectedMarker.type === 'warehouse'
+                      ? '#ef4444'
+                      : selectedMarker.type === 'origin'
+                      ? '#10b981'
+                      : '#0284c7',
+                  color: '#ffffff',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: 10,
+                  letterSpacing: '0.4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {selectedMarker.sequence === 0
+                  ? 'DEPOT'
+                  : selectedMarker.sequence !== undefined
+                  ? `Stop ${selectedMarker.sequence}`
+                  : selectedMarker.type === 'warehouse'
+                  ? 'DEPOT'
+                  : 'STOP'}
+              </span>
+              <strong style={{ fontSize: '0.92rem', color: '#ffffff' }}>{selectedMarker.title}</strong>
             </div>
             <button
               onClick={() => setSelectedMarker(null)}
@@ -685,25 +808,34 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
                 cursor: 'pointer',
                 fontSize: '0.9rem',
                 fontWeight: 'bold',
+                padding: '0 4px',
               }}
             >
-              X
+              ✕
             </button>
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: 6 }}>
-            {selectedMarker.subtitle || 'Tactical Node Point'}
+          <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: 4 }}>
+            {selectedMarker.data?.address || selectedMarker.subtitle || 'Assigned Logistics Route Node'}
           </div>
+          {selectedMarker.data?.orderNo && (
+            <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginBottom: 6, fontWeight: 600 }}>
+              Order #{selectedMarker.data.orderNo} • {selectedMarker.data?.status || 'Scheduled'}
+            </div>
+          )}
           <div
             style={{
               fontSize: '0.7rem',
               fontFamily: 'monospace',
               color: '#94a3b8',
-              background: 'rgba(0,0,0,0.3)',
+              background: 'rgba(0,0,0,0.35)',
               padding: '4px 8px',
               borderRadius: 6,
+              display: 'flex',
+              justifyContent: 'space-between',
             }}
           >
-            LAT: {selectedMarker.latitude.toFixed(5)} | LNG: {selectedMarker.longitude.toFixed(5)}
+            <span>LAT: {selectedMarker.latitude.toFixed(5)}</span>
+            <span>LNG: {selectedMarker.longitude.toFixed(5)}</span>
           </div>
         </div>
       )}
