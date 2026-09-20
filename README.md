@@ -11,7 +11,7 @@
 
 # Navi Mumbai Emergency Medical Supply Delivery & Route Optimization Platform
 
-![Navi Mumbai Medical Logistics Command Center](./docs/imgs/demo_screenshot.jpeg)
+![Navi Mumbai Medical Logistics Command Center](./docs/imgs/dispatchops_landing.png)
 
 ## Overview
 
@@ -147,19 +147,24 @@ This helps dispatchers understand why a particular assignment was produced.
 
 ### Interactive Route Visualization
 
-The command center provides a MapLibre GL-based 3D map for understanding the generated delivery plan geographically.
+The command center provides synchronized MapLibre GL 2D vector routing and 3D WebGL tactical satellite maps for understanding the generated delivery plan geographically.
+
+| 3D Tactical Satellite View (WebGL Extruded Buildings & Orbit) | 2D Standard Road Routing & Sequence Cards |
+| :---: | :---: |
+| ![3D Satellite Route Map](./docs/imgs/vehicle_fleet_3d.png) | ![2D Standard Route Map](./docs/imgs/vehicle_fleet_2d.png) |
+
+#### Metropolitan Network Route Intelligence
+![Metropolitan Route Intelligence](./docs/imgs/route_intelligence_2d.png)
 
 The visualization supports:
-- Route polylines
-- Delivery waypoints
-- Stop sequence markers
-- Multiple vehicle routes
-- 3D building visualization
-- Satellite and vector map presentation
-- Interactive camera controls
-- Route direction context
+- Route polylines with turn-by-turn road geometry
+- Numbered delivery waypoints & stop sequence badges (`1`, `2`, `3`)
+- Dual map modes: 2D Standard OpenStreetMap & 3D Photorealistic Satellite (ArcGIS World Imagery)
+- Dynamic 3D building extrusions, pitch angle controls, and 360° camera orbit
+- Real-time two-way synchronization between assigned order cards and map markers
+- Depot origin anchors and destination status pills
 
-The map connects the optimization result to the actual metropolitan road environment.
+The map connects the optimization result directly to the actual metropolitan road environment.
 
 ### Optimization Comparison
 
