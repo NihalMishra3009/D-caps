@@ -11,6 +11,9 @@ import Common from '../../../api/Common'
 import NextDayDelivery from '../../../api/NextDayDelivery'
 import ReferenceTruckGraphic from '../../../components/fleet/ReferenceTruckGraphic'
 import Interactive3DMap, { type MapMarkerItem } from '../../../components/MapComponent/Interactive3DMap'
+import StandardRouteMap, { type StandardRouteItem } from '../../../components/MapComponent/StandardRouteMap'
+import * as polyline from '@mapbox/polyline'
+import roadRoutesData from '../../../api/roadRoutes.json'
 import FleetOrderList, { type FleetOrderItem } from '../../../components/fleet/FleetOrderList'
 import NotFound from '../../../components/NotFound'
 import {
@@ -32,6 +35,7 @@ export const Details: React.FC = () => {
     (x) => x.Id === vehicleId || (x as any).id === vehicleId || x.carNo === vehicleId
   )
 
+  const [mapMode, setMapMode] = useState<'2d' | '3d'>('2d')
   const [deliveryJobs, setDeliveryJobs] = useState<any[]>([])
   const [showActionsMenu, setShowActionsMenu] = useState(false)
 
@@ -77,6 +81,8 @@ export const Details: React.FC = () => {
           locationAddress: s.address || 'Navi Mumbai',
           weightKg: Number(s.demands || 500),
           status: idx === 0 ? 'On Delivery' : idx === 3 ? 'Complete' : 'Scheduled',
+          latitude: Number(s.to?.latitude ?? s.latitude ?? 19.076),
+          longitude: Number(s.to?.longitude ?? s.longitude ?? 73.003),
         }))
     }
 
@@ -93,21 +99,21 @@ export const Details: React.FC = () => {
     const list: MapMarkerItem[] = [
       {
         id: 'depot-origin',
-        latitude: 19.0674,
-        longitude: 73.0205,
+        latitude: Number(matchedJob?.segments?.[0]?.from?.latitude ?? 19.0674),
+        longitude: Number(matchedJob?.segments?.[0]?.from?.longitude ?? 73.0205),
         title: 'Depot 95001200',
-        subtitle: 'Origin Hub',
+        subtitle: 'Navi Mumbai Central Hub',
         type: 'warehouse',
       },
     ]
 
-    assignedOrders.forEach((ord, idx) => {
-      const lats = [19.076, 19.019, 19.043, 19.028]
-      const lngs = [73.003, 73.038, 73.067, 73.018]
+    assignedOrders.forEach((ord: any, idx) => {
+      const defaultLats = [19.076, 19.019, 19.043, 19.028]
+      const defaultLngs = [73.003, 73.038, 73.067, 73.018]
       list.push({
         id: `stop-${ord.id}`,
-        latitude: lats[idx % lats.length],
-        longitude: lngs[idx % lngs.length],
+        latitude: ord.latitude || defaultLats[idx % defaultLats.length],
+        longitude: ord.longitude || defaultLngs[idx % defaultLngs.length],
         title: ord.customerName,
         subtitle: `#${ord.orderNo}`,
         type: 'destination',
@@ -115,7 +121,67 @@ export const Details: React.FC = () => {
     })
 
     return list
-  }, [assignedOrders])
+  }, [matchedJob, assignedOrders])
+
+  // Route Coordinates (Road Following)
+  const routeCoordinates = useMemo<[number, number][]>(() => {
+    // 1. Try matchedJob polyline
+    if (matchedJob?.route?.pointsEncoded) {
+      try {
+        const decoded = polyline.decode(matchedJob.route.pointsEncoded)
+        if (decoded && decoded.length >= 2) {
+          return decoded.map(([lat, lng]) => [lng, lat])
+        }
+      } catch (e) {
+        console.warn('Failed to decode matchedJob route polyline', e)
+      }
+    }
+
+    // 2. Try roadRoutesData by vehicle carNo
+    const carNo = currentItem?.carNo
+    if (carNo && (roadRoutesData as any)[carNo]?.polyline) {
+      try {
+        const decoded = polyline.decode((roadRoutesData as any)[carNo].polyline)
+        if (decoded && decoded.length >= 2) {
+          return decoded.map(([lat, lng]) => [lng, lat])
+        }
+      } catch (e) {
+        console.warn('Failed to decode roadRoutesData polyline', e)
+      }
+    }
+
+    // 3. Fallback: connect stops
+    if (mapMarkers && mapMarkers.length >= 2) {
+      return mapMarkers.map((m) => [m.longitude, m.latitude])
+    }
+
+    return []
+  }, [matchedJob, currentItem, mapMarkers])
+
+  // 2D Standard Routes
+  const standardRoutes = useMemo<StandardRouteItem[]>(() => {
+    if (!routeCoordinates || routeCoordinates.length < 2) return []
+    return [
+      {
+        id: `vehicle-route-${currentItem?.carNo || '1'}`,
+        color: '#9333ea',
+        label: `Vehicle ${currentItem?.carNo || ''} Calculated Road Route`,
+        points: routeCoordinates.map(([lng, lat]) => [lat, lng]),
+      },
+    ]
+  }, [routeCoordinates, currentItem])
+
+  // 3D Polylines
+  const mapPolylines = useMemo(() => {
+    if (!routeCoordinates || routeCoordinates.length < 2) return []
+    return [
+      {
+        id: `vehicle-poly-${currentItem?.carNo || '1'}`,
+        coordinates: routeCoordinates,
+        color: '#a855f7',
+      },
+    ]
+  }, [routeCoordinates, currentItem])
 
   const handleDelete = async () => {
     if (!currentItem) return
@@ -493,22 +559,99 @@ export const Details: React.FC = () => {
             flexDirection: 'column',
           }}
         >
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
-              ROUTE MAP
+          <div
+            style={{
+              padding: '12px 18px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: 'var(--bg-card)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MapPin size={15} color='var(--accent-purple)' />
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                VEHICLE {currentItem.carNo} ROUTE MAP
+              </div>
+            </div>
+
+            {/* 2D / 3D Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                gap: 4,
+                background: 'var(--bg-surface)',
+                padding: 3,
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+              }}
+            >
+              <button
+                type='button'
+                onClick={() => setMapMode('2d')}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: mapMode === '2d' ? 'var(--accent-purple)' : 'transparent',
+                  color: mapMode === '2d' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                2D Map (Standard)
+              </button>
+              <button
+                type='button'
+                onClick={() => setMapMode('3d')}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: mapMode === '3d' ? 'var(--accent-purple)' : 'transparent',
+                  color: mapMode === '3d' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                3D Satellite
+              </button>
             </div>
           </div>
-          <div style={{ flex: 1, minHeight: 320 }}>
-            <Interactive3DMap
-              markers={mapMarkers}
-              center={[73.0297, 19.033]}
-              zoom={13.2}
-              pitch={55}
-              bearing={-20}
-              height={320}
-              title={`Vehicle ${currentItem.carNo} Navigation`}
-              subtitle='Real-time turn-by-turn trajectory with 3D buildings'
-            />
+
+          <div style={{ flex: 1, minHeight: 340 }}>
+            {mapMode === '2d' ? (
+              <StandardRouteMap
+                markers={mapMarkers}
+                routes={standardRoutes}
+                height={340}
+              />
+            ) : (
+              <Interactive3DMap
+                markers={mapMarkers}
+                polylines={mapPolylines}
+                center={[73.0297, 19.033]}
+                zoom={13.2}
+                pitch={55}
+                bearing={-20}
+                height={340}
+                title={`Vehicle ${currentItem.carNo} Navigation`}
+                subtitle='Real-time turn-by-turn trajectory with 3D buildings'
+              />
+            )}
           </div>
         </div>
 
