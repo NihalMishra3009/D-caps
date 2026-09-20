@@ -20,52 +20,94 @@ export type NextDayDeliveryMapInputProps = {
 
 const { MAP_VARS } = appvars
 
-const createCustomIcon = (iconType: 'house' | 'person' | 'destination' | 'origin', color: string) => {
-  let svgInner = ''
-  if (iconType === 'house') {
-    svgInner = '<path d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />'
-  } else if (iconType === 'destination') {
-    svgInner = '<circle cx="12" cy="12" r="10" /><circle cx="9" cy="10" r="1.2" fill="#fff" /><circle cx="15" cy="10" r="1.2" fill="#fff" /><path d="M8 15c1.2 1.5 2.6 2 4 2s2.8-.5 4-2" stroke="#fff" stroke-width="1.5" fill="none" />'
-  } else if (iconType === 'origin') {
-    svgInner = '<path d="M8 2v9H6V2H4v20h2v-9h2v9h2V2H8zm9 0c-2 0-4 2-4 6 0 3 2 5 4 5v9h2V13c2 0 4-2 4-5 0-4-2-6-4-6h-2z" />'
-  } else {
-    svgInner = '<path d="M12 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 10c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z" />'
-  }
-
-  const svgHtml = `
-    <div style="background-color: ${color}; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid white;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff">
-        ${svgInner}
-      </svg>
-    </div>
-  `
-
+// Depot / Origin Marker (Red House matching reference image)
+const createDepotIcon = (name: string) => {
+  const safeName = (name || 'Depot Hub').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return L.divIcon({
-    html: svgHtml,
-    className: 'custom-leaflet-marker',
-    iconSize: [34, 34],
-    iconAnchor: [17, 34],
-    popupAnchor: [0, -34],
+    html: `
+      <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto; white-space: nowrap; transform: translate(-17px, -17px);">
+        <div style="background-color: #ef4444; width: 34px; height: 34px; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.35); border: 2px solid white;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
+            <path d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
+          </svg>
+        </div>
+        <span style="background: rgba(255,255,255,0.96); padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 13px; color: #0f172a; box-shadow: 0 2px 5px rgba(0,0,0,0.25); border: 1.5px solid #ef4444;">
+          ${safeName}
+        </span>
+      </div>
+    `,
+    className: 'custom-depot-marker',
+    iconSize: [120, 36],
+    iconAnchor: [17, 17],
   })
 }
 
-const houseIcon = createCustomIcon('house', '#ef4444')
-const customerIcon = createCustomIcon('person', '#8b5cf6')
+// Customer Stop Marker (Purple Pin with person icon matching reference image)
+const createCustomerIcon = (name: string, seq?: number) => {
+  const safeName = (name || `Stop ${seq || ''}`).replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return L.divIcon({
+    html: `
+      <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto; white-space: nowrap; transform: translate(-16px, -32px);">
+        <div style="background-color: #a855f7; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.35); border: 2px solid white;">
+          <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </svg>
+          </div>
+        </div>
+        <span style="background: rgba(255,255,255,0.96); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid #cbd5e1;">
+          ${safeName}
+        </span>
+      </div>
+    `,
+    className: 'custom-customer-marker',
+    iconSize: [130, 34],
+    iconAnchor: [16, 32],
+  })
+}
 
-const MapViewUpdater: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
+// MapViewUpdater automatically fitting bounds to markers and route polyline points
+const MapViewUpdater: React.FC<{
+  center: [number, number]
+  zoom: number
+  routePoints: [number, number][]
+  markers: { latitude: number; longitude: number }[]
+}> = ({ center, zoom, routePoints, markers }) => {
   const map = useMap()
+
   useEffect(() => {
-    map.setView(center, zoom)
+    const bounds = L.latLngBounds([])
+
+    markers.forEach((m) => {
+      if (!isNaN(m.latitude) && !isNaN(m.longitude)) {
+        bounds.extend([m.latitude, m.longitude])
+      }
+    })
+
+    routePoints.forEach(([lat, lng]) => {
+      if (!isNaN(lat) && !isNaN(lng)) {
+        bounds.extend([lat, lng])
+      }
+    })
+
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 })
+    } else {
+      map.setView(center, zoom)
+    }
+
     const timer = setTimeout(() => {
       map.invalidateSize()
-    }, 100)
+    }, 150)
     return () => clearTimeout(timer)
-  }, [center, zoom, map])
+  }, [center, zoom, routePoints, markers, map])
+
   return null
 }
 
 export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ segments, route }) => {
-  const [mapMode, setMapMode] = useState<string>('3d')
+  // Default to clean 2D OpenStreetMap mode matching user reference
+  const [mapMode, setMapMode] = useState<string>('2d')
   const [markers3D, setMarkers3D] = useState<MapMarkerItem[]>([])
   const [polylines3D, setPolylines3D] = useState<{ coordinates: [number, number][]; color?: string; id?: string }[]>([])
   const [warehouses, setWarehouses] = useState<any[]>([])
@@ -91,6 +133,7 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
       const wh = {
         latitude: Number(segments[0].from.lat),
         longitude: Number(segments[0].from.long),
+        title: segments[0].deliveryName || 'Dispatch Hub Depot',
       }
       whList.push(wh)
       mList.push({
@@ -107,7 +150,7 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
       if (r.to?.lat && r.to?.long) {
         const cust = {
           deliveryCode: r.deliveryCode,
-          deliveryName: r.deliveryName,
+          deliveryName: r.deliveryName || `Stop #${idx + 1}`,
           deliveryTimeGroup: r.deliveryTimeGroup,
           demands: r.demands,
           latitude: Number(r.to.lat),
@@ -142,7 +185,7 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
             {
               id: 'vehicle-route-active',
               coordinates: decoded.map(([lat, lng]) => [lng, lat]),
-              color: '#38bdf8',
+              color: '#9333ea',
             },
           ])
           return
@@ -175,7 +218,7 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
             {
               id: 'vehicle-route-active',
               coordinates: allDecodedPoints.map(([lat, lng]) => [lng, lat]),
-              color: '#38bdf8',
+              color: '#9333ea',
             },
           ])
           return
@@ -183,12 +226,49 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
       } catch (e) {
         console.warn('Error decoding segment routes', e)
       }
+
+      // Priority 3: Segment waypoint coordinates sequence fallback
+      try {
+        const waypointPoints: [number, number][] = []
+        segments.forEach((seg: any, idx: number) => {
+          const fromLat = Number(seg.from?.lat ?? seg.from?.latitude)
+          const fromLng = Number(seg.from?.long ?? seg.from?.longitude)
+          const toLat = Number(seg.to?.lat ?? seg.to?.latitude)
+          const toLng = Number(seg.to?.long ?? seg.to?.longitude)
+
+          if (!isNaN(fromLat) && !isNaN(fromLng) && (waypointPoints.length === 0 || idx === 0)) {
+            waypointPoints.push([fromLat, fromLng])
+          }
+          if (!isNaN(toLat) && !isNaN(toLng)) {
+            waypointPoints.push([toLat, toLng])
+          }
+        })
+
+        if (waypointPoints.length >= 2) {
+          setLeafletRoute(waypointPoints)
+          setPolylines3D([
+            {
+              id: 'vehicle-route-active',
+              coordinates: waypointPoints.map(([lat, lng]) => [lng, lat]),
+              color: '#9333ea',
+            },
+          ])
+          return
+        }
+      } catch (e) {
+        console.warn('Error extracting segment waypoint coordinates', e)
+      }
     }
 
     // Default: Empty route
     setPolylines3D([])
     setLeafletRoute([])
   }, [route, segments])
+
+  const allMapMarkers = [
+    ...warehouses.map((w) => ({ latitude: w.latitude, longitude: w.longitude })),
+    ...customers.map((c) => ({ latitude: c.latitude, longitude: c.longitude })),
+  ]
 
   return (
     <Container
@@ -201,18 +281,91 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
                 selectedId={mapMode}
                 onChange={({ detail }) => setMapMode(detail.selectedId)}
                 options={[
-                  { id: '3d', text: '3D Tactical (Three.js & MapLibre)' },
-                  { id: '2d', text: '2D OpenStreetMap' },
+                  { id: '2d', text: '2D OpenStreetMap (Standard)' },
+                  { id: '3d', text: '3D Satellite & Buildings' },
                 ]}
               />
             </SpaceBetween>
           }
         >
-          MMR Vehicle Route & Turn-by-Turn Map
+          Delivery Vehicle Route Map
         </Header>
       }
     >
-      {mapMode === '3d' ? (
+      {mapMode === '2d' ? (
+        <div style={{ width: '100%', height: 600, borderRadius: 12, overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+          <MapContainer
+            center={[defaultCenterLat, defaultCenterLng]}
+            zoom={12}
+            style={{ width: '100%', height: '100%' }}
+            scrollWheelZoom={true}
+          >
+            <MapViewUpdater
+              center={[defaultCenterLat, defaultCenterLng]}
+              zoom={12}
+              routePoints={leafletRoute}
+              markers={allMapMarkers}
+            />
+
+            {/* Standard OpenStreetMap Tiles matching user reference image */}
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+              maxZoom={19}
+            />
+
+            {/* Route Polyline (Bold vibrant purple matching reference image) */}
+            {leafletRoute.length > 0 && (
+              <LeafletPolyline
+                positions={leafletRoute}
+                pathOptions={{
+                  color: '#9333ea',
+                  weight: 5,
+                  opacity: 0.95,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+            )}
+
+            {/* Warehouse / Depot Hub Marker (Red House matching reference image) */}
+            {warehouses.map((r, idx) => (
+              <Marker
+                key={`warehouse-${idx}`}
+                position={[r.latitude, r.longitude]}
+                icon={createDepotIcon(r.title || 'Dispatch Hub Depot')}
+              >
+                <Popup>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#ef4444' }}>{r.title || 'Distribution Depot Hub'}</h4>
+                    <div style={{ maxWidth: 300, maxHeight: 180, overflow: 'auto' }}>
+                      <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {/* Customer Delivery Stop Markers (Purple Pins matching reference image) */}
+            {customers.map((r, idx) => (
+              <Marker
+                key={`customer-${idx}`}
+                position={[r.latitude, r.longitude]}
+                icon={createCustomerIcon(r.deliveryName || `Stop #${idx + 1}`, idx + 1)}
+              >
+                <Popup>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#9333ea' }}>{r.deliveryName || 'Medical Center'}</h4>
+                    <div style={{ maxWidth: 300, maxHeight: 180, overflow: 'auto' }}>
+                      <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
+      ) : (
         <Interactive3DMap
           markers={markers3D}
           polylines={polylines3D}
@@ -220,62 +373,10 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
           zoom={13.5}
           pitch={58}
           bearing={-15}
-          height={750}
+          height={600}
           title='Vehicle Route & Dispatch Navigation'
           subtitle='3D Turn-by-turn trajectory with extruded urban buildings'
         />
-      ) : (
-        <div style={{ width: '100%', height: 750, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
-          <MapContainer
-            center={[defaultCenterLat, defaultCenterLng]}
-            zoom={12}
-            style={{ width: '100%', height: '100%' }}
-            scrollWheelZoom={true}
-          >
-            <MapViewUpdater center={[defaultCenterLat, defaultCenterLng]} zoom={12} />
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-            />
-
-            {warehouses.map((r, idx) => (
-              <Marker key={`warehouse-${idx}`} position={[r.latitude, r.longitude]} icon={houseIcon}>
-                <Popup>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#ef4444' }}>Distribution Depot Hub</h4>
-                    <div style={{ maxWidth: 300, maxHeight: 180, overflow: 'auto' }}>
-                      <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
-            {customers.map((r, idx) => (
-              <Marker key={`customer-${idx}`} position={[r.latitude, r.longitude]} icon={customerIcon}>
-                <Popup>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#8b5cf6' }}>{r.deliveryName || 'Medical Center'}</h4>
-                    <div style={{ maxWidth: 300, maxHeight: 180, overflow: 'auto' }}>
-                      <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
-            {leafletRoute.length > 0 && (
-              <LeafletPolyline
-                positions={leafletRoute}
-                pathOptions={{
-                  color: '#0284c7',
-                  weight: 6,
-                  opacity: 0.9,
-                }}
-              />
-            )}
-          </MapContainer>
-        </div>
       )}
     </Container>
   )

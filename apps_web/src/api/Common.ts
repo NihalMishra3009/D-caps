@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: MIT-0
  */
 
+import * as polyline from '@mapbox/polyline'
+import roadRoutesData from './roadRoutes.json'
+
 // Initial Seed Data for Local Offline Mode (using standard casing `Id` and `id`)
 // Navi Mumbai Warehouses / Logistics Hubs
 const initialWarehouses = [
@@ -714,6 +717,42 @@ const commonGetRequest = async (path: string, _queryStringParameters?: unknown):
         })),
       ]
 
+      const precomputed = (roadRoutesData as Record<string, any>)[v.carNo]
+
+      let pointsEncoded = precomputed?.polyline || ''
+      const distanceMeters = precomputed?.distance || 14200 + vIdx * 2800
+      const durationSeconds = precomputed?.duration || 1620 + vIdx * 350
+
+      const enrichedSegments = segments.map((seg: any, sIdx: number) => {
+        const leg = precomputed?.legs?.[sIdx]
+        return {
+          ...seg,
+          route: {
+            pointsEncoded: leg?.polyline || '',
+            distance: { value: leg?.distance || 8500, unit: 'm' },
+            time: { value: leg?.duration || 600, unit: 'sec' },
+          },
+        }
+      })
+
+      if (!pointsEncoded) {
+        const routePoints: [number, number][] = []
+        segments.forEach((seg: any, sIdx: number) => {
+          if (sIdx === 0 && seg.from?.lat && seg.from?.long) {
+            routePoints.push([Number(seg.from.lat), Number(seg.from.long)])
+          }
+          if (seg.to?.lat && seg.to?.long) {
+            routePoints.push([Number(seg.to.lat), Number(seg.to.long)])
+          }
+        })
+
+        try {
+          pointsEncoded = polyline.encode(routePoints)
+        } catch (e) {
+          console.warn('Could not encode polyline for mock delivery job', e)
+        }
+      }
+
       return {
         Id: `del-job-${v.carNo || vIdx}`,
         id: `del-job-${v.carNo || vIdx}`,
@@ -722,7 +761,12 @@ const commonGetRequest = async (path: string, _queryStringParameters?: unknown):
         loadCapacity: 920 + vIdx * 250,
         maxCapacity: v.maxCapacity || 2500,
         orderCount: segments.length - 1,
-        segments: segments,
+        segments: enrichedSegments,
+        route: {
+          pointsEncoded: pointsEncoded,
+          distanceMeters: distanceMeters,
+          durationSeconds: durationSeconds,
+        },
         createdAt: Date.now() - 86400000,
         updatedAt: Date.now(),
       }

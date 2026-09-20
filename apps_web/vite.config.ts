@@ -18,7 +18,33 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
-    // maplibre-gl 과 Cloudscape 가 대용량이므로 chunk 경고 상향
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('maplibre-gl') || id.includes('leaflet')) {
+              return 'vendor-maps'
+            }
+            if (id.includes('@cloudscape-design')) {
+              return 'vendor-cloudscape'
+            }
+            if (id.includes('@aws-amplify') || id.includes('aws-amplify')) {
+              return 'vendor-amplify'
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons'
+            }
+            if (
+              id.includes('react-router-dom') ||
+              id.includes('react-dom') ||
+              id.includes('/react/')
+            ) {
+              return 'vendor-react'
+            }
+          }
+        },
+      },
+    },
   },
 })

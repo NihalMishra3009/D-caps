@@ -10,7 +10,6 @@ import {
   RotateCw,
   Crosshair,
   Building2,
-  Radio,
   Layers,
 } from 'lucide-react'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -153,6 +152,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
   const [showBuildings, setShowBuildings] = useState(true)
   const [isOrbiting, setIsOrbiting] = useState(false)
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerItem | null>(null)
+  const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
 
   // Initialize MapLibre Earth & 3D Building Engine
@@ -172,6 +172,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
     })
 
     mapRef.current = map
+    setMapInstance(map)
 
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
@@ -201,37 +202,177 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
       markerElementsRef.current = []
       map.remove()
       mapRef.current = null
+      setMapInstance(null)
     }
   }, [])
 
   const activeLayerIdsRef = useRef<string[]>([])
   const activeSourceIdsRef = useRef<string[]>([])
 
-  // Sync Markers & Polylines onto Real Earth Coordinates
+  // 1. Immediately Render DOM Markers & Fit Bounds (Instant — does NOT wait for remote vector/satellite tiles)
   useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+    if (!mapInstance) return
 
-    const renderLayersAndMarkers = () => {
-      if (!map.isStyleLoaded()) return
+    // Clean up previous DOM markers
+    markerElementsRef.current.forEach((m) => m.remove())
+    markerElementsRef.current = []
 
-      // 1. Clean up previous DOM markers
-      markerElementsRef.current.forEach((m) => m.remove())
-      markerElementsRef.current = []
+    if (!markers || markers.length === 0) return
 
-      // 2. Clean up previous polyline layers and sources
+    const bounds = new maplibregl.LngLatBounds()
+
+    markers.forEach((m) => {
+      if (!isNaN(m.longitude) && !isNaN(m.latitude)) {
+        bounds.extend([m.longitude, m.latitude])
+      }
+    })
+
+    if (polylines && polylines.length > 0) {
+      polylines.forEach((poly) => {
+        poly.coordinates.forEach(([lng, lat]) => {
+          if (!isNaN(lng) && !isNaN(lat)) {
+            bounds.extend([lng, lat])
+          }
+        })
+      })
+    }
+
+    if (markers.length === 1 && (!polylines || polylines.length === 0)) {
+      mapInstance.flyTo({
+        center: [markers[0].longitude, markers[0].latitude],
+        zoom: 16.2,
+        pitch: 62,
+        bearing: -20,
+        duration: 800,
+        essential: true,
+      })
+    } else if (!bounds.isEmpty()) {
+      mapInstance.fitBounds(bounds, {
+        padding: { top: 70, bottom: 70, left: 70, right: 70 },
+        maxZoom: 15,
+        duration: 800,
+      })
+    }
+
+    // Attach markers immediately to the DOM overlay
+    markers.forEach((marker) => {
+      const el = document.createElement('div')
+      el.className = 'earth-marker-3d'
+      el.style.cursor = 'pointer'
+      el.style.zIndex = '5'
+
+      const isWh = marker.type === 'warehouse'
+      const isDest = marker.type === 'destination'
+      const isOrg = marker.type === 'origin'
+
+      const badgeColor = isWh ? '#ef4444' : isOrg ? '#10b981' : isDest ? '#0284c7' : '#a855f7'
+
+      el.innerHTML = `
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: auto;">
+          <!-- Pulsing Beacon Halo -->
+          <div style="
+            position: absolute;
+            top: -6px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid ${badgeColor};
+            box-shadow: 0 0 16px ${badgeColor}, inset 0 0 8px ${badgeColor};
+            animation: tacticalPulse 2s infinite ease-in-out;
+            pointer-events: none;
+          "></div>
+
+          <!-- Floating 3D Badge -->
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(10, 18, 36, 0.96);
+            border: 1.5px solid ${badgeColor};
+            box-shadow: 0 0 16px ${badgeColor}88, 0 6px 14px rgba(0,0,0,0.8);
+            border-radius: 18px;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+          " class="marker-pill">
+            <span>${marker.title}</span>
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor}; box-shadow: 0 0 8px ${badgeColor};"></div>
+          </div>
+
+          <!-- Vertical Anchor Pin Point -->
+          <div style="
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid ${badgeColor};
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+          "></div>
+        </div>
+      `
+
+      el.addEventListener('mouseenter', () => {
+        const pill = el.querySelector('.marker-pill') as HTMLElement
+        if (pill) {
+          pill.style.transform = 'scale(1.1)'
+          pill.style.borderColor = '#ffffff'
+        }
+      })
+
+      el.addEventListener('mouseleave', () => {
+        const pill = el.querySelector('.marker-pill') as HTMLElement
+        if (pill) {
+          pill.style.transform = 'scale(1)'
+          pill.style.borderColor = badgeColor
+        }
+      })
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation()
+        setSelectedMarker(marker)
+        mapInstance.flyTo({
+          center: [marker.longitude, marker.latitude],
+          zoom: 17,
+          pitch: 65,
+          bearing: -20,
+          duration: 1200,
+          essential: true,
+        })
+      })
+
+      const mapMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([marker.longitude, marker.latitude])
+        .addTo(mapInstance)
+
+      markerElementsRef.current.push(mapMarker)
+    })
+  }, [mapInstance, markers, polylines])
+
+  // 2. Sync WebGL Route Polylines onto Real Earth Coordinates
+  useEffect(() => {
+    if (!mapInstance) return
+
+    const renderPolylines = () => {
+      if (!mapInstance.isStyleLoaded()) return
+
+      // Clean up previous polyline layers and sources
       try {
-        const style = map.getStyle()
+        const style = mapInstance.getStyle()
         if (style && style.layers) {
           style.layers.forEach((layer) => {
             if (layer.id.startsWith('hybrid-route-')) {
-              if (map.getLayer(layer.id)) map.removeLayer(layer.id)
+              if (mapInstance.getLayer(layer.id)) mapInstance.removeLayer(layer.id)
             }
           })
         }
         activeLayerIdsRef.current.forEach((layerId) => {
-          if (map.getLayer(layerId)) {
-            map.removeLayer(layerId)
+          if (mapInstance.getLayer(layerId)) {
+            mapInstance.removeLayer(layerId)
           }
         })
         activeLayerIdsRef.current = []
@@ -239,13 +380,13 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
         if (style && style.sources) {
           Object.keys(style.sources).forEach((sourceId) => {
             if (sourceId.startsWith('hybrid-route-')) {
-              if (map.getSource(sourceId)) map.removeSource(sourceId)
+              if (mapInstance.getSource(sourceId)) mapInstance.removeSource(sourceId)
             }
           })
         }
         activeSourceIdsRef.current.forEach((sourceId) => {
-          if (map.getSource(sourceId)) {
-            map.removeSource(sourceId)
+          if (mapInstance.getSource(sourceId)) {
+            mapInstance.removeSource(sourceId)
           }
         })
         activeSourceIdsRef.current = []
@@ -253,7 +394,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
         console.warn('Error during map layer/source cleanup', e)
       }
 
-      // 3. Add Polylines
+      // Add Polylines
       if (polylines && polylines.length > 0) {
         polylines.forEach((route, idx) => {
           if (!route.coordinates || route.coordinates.length < 2) return
@@ -273,18 +414,18 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
           }
 
           try {
-            if (map.getSource(sourceId)) {
-              ;(map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojsonData)
+            if (mapInstance.getSource(sourceId)) {
+              ;(mapInstance.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojsonData)
             } else {
-              map.addSource(sourceId, {
+              mapInstance.addSource(sourceId, {
                 type: 'geojson',
                 data: geojsonData,
               })
             }
             activeSourceIdsRef.current.push(sourceId)
 
-            if (!map.getLayer(glowId)) {
-              map.addLayer({
+            if (!mapInstance.getLayer(glowId)) {
+              mapInstance.addLayer({
                 id: glowId,
                 type: 'line',
                 source: sourceId,
@@ -299,8 +440,8 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
             }
             activeLayerIdsRef.current.push(glowId)
 
-            if (!map.getLayer(lineId)) {
-              map.addLayer({
+            if (!mapInstance.getLayer(lineId)) {
+              mapInstance.addLayer({
                 id: lineId,
                 type: 'line',
                 source: sourceId,
@@ -318,163 +459,26 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
           }
         })
       }
-
-      // 4. Add 3D Tactical DOM Markers & Fit Bounds
-      const bounds = new maplibregl.LngLatBounds()
-
-      if (markers && markers.length > 0) {
-        markers.forEach((m) => {
-          if (!isNaN(m.longitude) && !isNaN(m.latitude)) {
-            bounds.extend([m.longitude, m.latitude])
-          }
-        })
-      }
-
-      if (polylines && polylines.length > 0) {
-        polylines.forEach((poly) => {
-          poly.coordinates.forEach(([lng, lat]) => {
-            if (!isNaN(lng) && !isNaN(lat)) {
-              bounds.extend([lng, lat])
-            }
-          })
-        })
-      }
-
-      if (markers && markers.length === 1 && (!polylines || polylines.length === 0)) {
-        map.flyTo({
-          center: [markers[0].longitude, markers[0].latitude],
-          zoom: 16.2,
-          pitch: 62,
-          bearing: -20,
-          duration: 1000,
-          essential: true,
-        })
-      } else if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, {
-          padding: { top: 70, bottom: 70, left: 70, right: 70 },
-          maxZoom: 15,
-          duration: 1000,
-        })
-      }
-
-      if (markers && markers.length > 0) {
-        markers.forEach((marker) => {
-          const el = document.createElement('div')
-          el.className = 'earth-marker-3d'
-          el.style.cursor = 'pointer'
-          el.style.zIndex = '5'
-
-          const isWh = marker.type === 'warehouse'
-          const isDest = marker.type === 'destination'
-          const isOrg = marker.type === 'origin'
-
-          const badgeColor = isWh ? '#ef4444' : isOrg ? '#10b981' : isDest ? '#0284c7' : '#a855f7'
-
-          el.innerHTML = `
-            <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: auto;">
-              <!-- Pulsing Beacon Halo -->
-              <div style="
-                position: absolute;
-                top: -6px;
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                border: 2px solid ${badgeColor};
-                box-shadow: 0 0 16px ${badgeColor}, inset 0 0 8px ${badgeColor};
-                animation: tacticalPulse 2s infinite ease-in-out;
-                pointer-events: none;
-              "></div>
-
-              <!-- Floating 3D Badge -->
-              <div style="
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 6px 12px;
-                background: rgba(10, 18, 36, 0.96);
-                border: 1.5px solid ${badgeColor};
-                box-shadow: 0 0 16px ${badgeColor}88, 0 6px 14px rgba(0,0,0,0.8);
-                border-radius: 18px;
-                color: #ffffff;
-                font-family: system-ui, -apple-system, sans-serif;
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.3px;
-                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                white-space: nowrap;
-              " class="marker-pill">
-                <span>${marker.title}</span>
-                <div style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor}; box-shadow: 0 0 8px ${badgeColor};"></div>
-              </div>
-
-              <!-- Vertical Anchor Pin Point -->
-              <div style="
-                width: 0;
-                height: 0;
-                border-left: 6px solid transparent;
-                border-right: 6px solid transparent;
-                border-top: 8px solid ${badgeColor};
-                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-              "></div>
-            </div>
-          `
-
-          el.addEventListener('mouseenter', () => {
-            const pill = el.querySelector('.marker-pill') as HTMLElement
-            if (pill) {
-              pill.style.transform = 'scale(1.1)'
-              pill.style.borderColor = '#ffffff'
-            }
-          })
-
-          el.addEventListener('mouseleave', () => {
-            const pill = el.querySelector('.marker-pill') as HTMLElement
-            if (pill) {
-              pill.style.transform = 'scale(1)'
-              pill.style.borderColor = badgeColor
-            }
-          })
-
-          el.addEventListener('click', (e) => {
-            e.stopPropagation()
-            setSelectedMarker(marker)
-            map.flyTo({
-              center: [marker.longitude, marker.latitude],
-              zoom: 17,
-              pitch: 65,
-              bearing: -20,
-              duration: 1500,
-              essential: true,
-            })
-          })
-
-          const mapMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-            .setLngLat([marker.longitude, marker.latitude])
-            .addTo(map)
-
-          markerElementsRef.current.push(mapMarker)
-        })
-      }
     }
 
-    if (map.isStyleLoaded()) {
-      renderLayersAndMarkers()
+    if (mapInstance.isStyleLoaded()) {
+      renderPolylines()
     }
 
     const handleStyleReady = () => {
-      if (map.isStyleLoaded()) {
-        renderLayersAndMarkers()
+      if (mapInstance.isStyleLoaded()) {
+        renderPolylines()
       }
     }
 
-    map.on('styledata', handleStyleReady)
-    map.on('load', handleStyleReady)
+    mapInstance.on('styledata', handleStyleReady)
+    mapInstance.on('load', handleStyleReady)
 
     return () => {
-      map.off('styledata', handleStyleReady)
-      map.off('load', handleStyleReady)
+      mapInstance.off('styledata', handleStyleReady)
+      mapInstance.off('load', handleStyleReady)
     }
-  }, [markers, polylines, mapLoaded])
+  }, [mapInstance, polylines, mapLoaded])
 
   // Toggle 3D Pitch
   const toggle3D = useCallback(() => {
@@ -562,53 +566,6 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
 
       {/* MapLibre 3D Hybrid Satellite + 3D Buildings Viewport */}
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-
-      {/* Top HUD Header Banner */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 16,
-          left: 16,
-          zIndex: 10,
-          background: 'rgba(6, 11, 25, 0.9)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(56, 189, 248, 0.4)',
-          borderRadius: 12,
-          padding: '12px 18px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
-          pointerEvents: 'auto',
-          maxWidth: 520,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <Radio className='w-4 h-4 text-cyan-400 animate-pulse' style={{ color: '#38bdf8' }} />
-          <span
-            style={{
-              fontSize: '0.9rem',
-              fontWeight: 700,
-              color: '#f8fafc',
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase',
-            }}
-          >
-            {title}
-          </span>
-          <span
-            style={{
-              fontSize: '0.65rem',
-              padding: '2px 6px',
-              borderRadius: 6,
-              background: 'rgba(56, 189, 248, 0.2)',
-              color: '#38bdf8',
-              fontWeight: 700,
-              border: '1px solid rgba(56, 189, 248, 0.5)',
-            }}
-          >
-            3D SATELLITE & HOUSES
-          </span>
-        </div>
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{subtitle}</div>
-      </div>
 
       {/* Right-Side Floating Controls */}
       <div

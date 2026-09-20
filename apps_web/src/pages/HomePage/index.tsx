@@ -14,6 +14,7 @@ import { appvars } from '../../config'
 import Common from '../../api/Common'
 import NextDayDelivery from '../../api/NextDayDelivery'
 import Interactive3DMap, { type MapMarkerItem } from '../../components/MapComponent/Interactive3DMap'
+import StandardRouteMap, { type StandardRouteItem } from '../../components/MapComponent/StandardRouteMap'
 import TruckGraphic from '../../components/fleet/TruckGraphic'
 import {
   ArrowRight,
@@ -45,28 +46,53 @@ const extractRouteCoordinates = (job: any): [number, number][] => {
         return decoded.map(([lat, lng]) => [lng, lat])
       }
     } catch (e) {
-      console.warn('Failed to decode top-level route polyline', e)
+      console.warn('[Route Debug] Failed to decode top-level route polyline', e)
     }
   }
 
   if (Array.isArray(job?.segments) && job.segments.length > 0) {
     const points: [number, number][] = []
+    let hasSegmentPolylines = false
+
     job.segments.forEach((seg: any) => {
       if (seg?.route?.pointsEncoded) {
         try {
           const segDecoded = polyline.decode(seg.route.pointsEncoded)
-          segDecoded.forEach(([lat, lng]) => {
-            if (!isNaN(lat) && !isNaN(lng)) {
-              points.push([lng, lat])
-            }
-          })
+          if (segDecoded && segDecoded.length > 0) {
+            hasSegmentPolylines = true
+            segDecoded.forEach(([lat, lng]) => {
+              if (!isNaN(lat) && !isNaN(lng)) {
+                points.push([lng, lat])
+              }
+            })
+          }
         } catch (e) {
-          console.warn('Failed to decode segment polyline', e)
+          console.warn('[Route Debug] Failed to decode segment polyline', e)
         }
       }
     })
-    if (points.length >= 2) {
+    if (hasSegmentPolylines && points.length >= 2) {
       return points
+    }
+
+    // Level 3: Segment waypoints (from -> to) fallback
+    const waypoints: [number, number][] = []
+    job.segments.forEach((seg: any, idx: number) => {
+      const fromLat = Number(seg.from?.lat ?? seg.from?.latitude)
+      const fromLng = Number(seg.from?.long ?? seg.from?.longitude)
+      const toLat = Number(seg.to?.lat ?? seg.to?.latitude)
+      const toLng = Number(seg.to?.long ?? seg.to?.longitude)
+
+      if (!isNaN(fromLat) && !isNaN(fromLng) && (waypoints.length === 0 || idx === 0)) {
+        waypoints.push([fromLng, fromLat])
+      }
+      if (!isNaN(toLat) && !isNaN(toLng)) {
+        waypoints.push([toLng, toLat])
+      }
+    })
+
+    if (waypoints.length >= 2) {
+      return waypoints
     }
   }
 
@@ -75,8 +101,10 @@ const extractRouteCoordinates = (job: any): [number, number][] => {
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate()
+  const [dashboardMapMode, setDashboardMapMode] = useState<'2d' | '3d'>('2d')
   const [markers, setMarkers] = useState<MapMarkerItem[]>([])
   const [polylines, setPolylines] = useState<{ coordinates: [number, number][]; color?: string; id?: string }[]>([])
+  const [standardRoutes, setStandardRoutes] = useState<StandardRouteItem[]>([])
 
   useEffect(() => {
     const loadOverviewData = async () => {
@@ -120,14 +148,23 @@ export const HomePage: React.FC = () => {
         }
 
         const polyList: { coordinates: [number, number][]; color?: string; id?: string }[] = []
+        const stdRouteList: StandardRouteItem[] = []
+
         if (jobRes.status === 'fulfilled' && jobRes.value?.data?.Items) {
           jobRes.value.data.Items.forEach((j: any, idx: number) => {
             const coords = extractRouteCoordinates(j)
+            const color = VEHICLE_COLORS[idx % VEHICLE_COLORS.length]
             if (coords.length >= 2) {
               polyList.push({
                 id: `dashboard-route-${j.carNo || j.Id || idx}`,
                 coordinates: coords,
-                color: VEHICLE_COLORS[idx % VEHICLE_COLORS.length],
+                color: color,
+              })
+              stdRouteList.push({
+                id: `route-${j.carNo || j.Id || idx}`,
+                name: `Vehicle ${j.carNo || idx + 1}`,
+                color: color,
+                points: coords.map(([lng, lat]) => [lat, lng]),
               })
             }
           })
@@ -135,6 +172,7 @@ export const HomePage: React.FC = () => {
 
         setMarkers(list)
         setPolylines(polyList)
+        setStandardRoutes(stdRouteList)
       } catch (e) {
         console.error('Error fetching home map markers and delivery routes', e)
       }
@@ -532,23 +570,73 @@ export const HomePage: React.FC = () => {
             </div>
             <h2 className='heading-section'>Optimized movement across the metropolitan delivery network</h2>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className='status-dot status-dot-success' />
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Live GraphHopper Topology Active</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                display: 'flex',
+                backgroundColor: 'var(--bg-surface-muted)',
+                padding: '3px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <button
+                type='button'
+                onClick={() => setDashboardMapMode('2d')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: dashboardMapMode === '2d' ? 'var(--accent-purple)' : 'transparent',
+                  color: dashboardMapMode === '2d' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                2D OpenStreetMap (Standard)
+              </button>
+              <button
+                type='button'
+                onClick={() => setDashboardMapMode('3d')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: dashboardMapMode === '3d' ? 'var(--accent-purple)' : 'transparent',
+                  color: dashboardMapMode === '3d' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                3D Satellite & Buildings
+              </button>
+            </div>
           </div>
         </div>
 
-        <Interactive3DMap
-          markers={markers}
-          polylines={polylines}
-          center={[73.0297, 19.033]}
-          zoom={12.8}
-          pitch={58}
-          bearing={-20}
-          height={480}
-          title='Navi Mumbai Active Fleet & Hub Radar'
-          subtitle='3D Building Extrusions & Satellite Base Layer'
-        />
+        {dashboardMapMode === '2d' ? (
+          <StandardRouteMap
+            markers={markers}
+            routes={standardRoutes}
+            height={520}
+          />
+        ) : (
+          <Interactive3DMap
+            markers={markers}
+            polylines={polylines}
+            center={[73.0297, 19.033]}
+            zoom={12.8}
+            pitch={58}
+            bearing={-20}
+            height={520}
+            title='Navi Mumbai Active Fleet & Hub Radar'
+            subtitle='3D Building Extrusions & Satellite Base Layer'
+          />
+        )}
       </section>
     </div>
   )
