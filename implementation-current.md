@@ -56,9 +56,9 @@ c:\AWS project\delivery-routes-optimization-for-logistics\
 │   └── package.json          # CDK dependencies
 │
 ├── docs/                     # Architecture & Quickstart guides
-├── features.md               # Product feature requirements
-├── implementation (1).md     # Master implementation specification
-└── design.md                 # Current frontend design specification
+├── PROJECT_EXPLAINER.md      # Plain-language project explainer
+├── design.md                 # Current frontend design specification
+└── README.md                 # Master project documentation
 ```
 
 ---
