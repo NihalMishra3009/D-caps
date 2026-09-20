@@ -10,8 +10,9 @@ import java.nio.file.Paths;
 public class PathHelper {
     public static Path getAbsPath(String path) {
         if (path.startsWith("~")) {
-            path = path.replaceFirst("^~", System.getProperty("user.home"));
+            String userHome = System.getProperty("user.home").replace("\\", "/");
+            path = path.replaceFirst("^~/?", userHome + "/");
         }
-        return Paths.get(path).toAbsolutePath();
+        return Paths.get(path).toAbsolutePath().normalize();
     }
 }

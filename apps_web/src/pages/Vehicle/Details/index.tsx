@@ -22,7 +22,7 @@ export const Details: FunctionComponent = () => {
   const navigate = useNavigate()
   const { vehicleId } = useParams<{ vehicleId: string }>()
   const [{ items: vehicleItems }, { deleteItem }] = useVehicleContext()
-  const currentItem = vehicleItems.find((x) => x.Id === vehicleId)
+  const currentItem = vehicleItems.find((x) => x.Id === vehicleId || (x as any).id === vehicleId || x.carNo === vehicleId)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const onEditClick = useCallback(() => {

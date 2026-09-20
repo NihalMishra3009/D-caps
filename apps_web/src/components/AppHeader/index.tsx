@@ -8,7 +8,7 @@ import { TopNavigation, type TopNavigationProps } from '@cloudscape-design/compo
 import { signOut } from 'aws-amplify/auth'
 import { useAuthContext } from '../../contexts/AuthenticatedUserContext'
 
-const APP_TITLE = 'Delivery Route Optimization with Order Dispatching'
+const APP_TITLE = 'Navi Mumbai Medical Logistics Command Center'
 
 const AppHeader: FunctionComponent = () => {
   const { userInfo } = useAuthContext()

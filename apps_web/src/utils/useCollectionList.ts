@@ -93,7 +93,8 @@ export function useCollectionList<T>({
     const primaryField = (sortingColumn?.sortingField ?? defaultSort?.field) as keyof T | undefined
     const primaryDesc = sortingDescending
 
-    const copy = [...items]
+    const safeItems = Array.isArray(items) ? items : []
+    const copy = [...safeItems]
     if (!primaryField && !secondarySort) {
       return copy
     }

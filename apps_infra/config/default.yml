@@ -5,17 +5,17 @@
 env:
   # AWS Account ID (12-digit integer) — REPLACE with your own before deploying.
   # The value is validated by Zod and `cdk deploy` will fail until it is real.
-  account: 'XXXXXXXXXXXX'
+  account: '564159155699'
 
   # AWS region string
-  region: us-east-1
+  region: ap-south-1
 
 # string prefix for resources created by CDK
 namespace: devproto
 
 # the administrator email address
 # make sure this is accurate, cognito will send a temporary password once the deployment goes through
-administratorEmail: your-email@example.com
+administratorEmail: nihalmishra3009@gmail.com
 
 # administrator display name for Cognito
 administratorName: Administrator

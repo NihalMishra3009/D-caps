@@ -39,9 +39,14 @@ export const MAP_VARS = {
   // OpenFreeMap style URL (no API key required)
   MAP_STYLE: 'https://tiles.openfreemap.org/styles/liberty',
 
-  // Map Default location : Seoul station
-  DEFAULT_LATITUDE: 37.5577857,
-  DEFAULT_LONGITUDE: 126.9697484,
+  // Navi Mumbai Central Coordinates (MMR, Maharashtra, India)
+  DEFAULT_LATITUDE: 19.0330,
+  DEFAULT_LONGITUDE: 73.0297,
+  DEFAULT_ZOOM_LEVEL: 12,
+  MAX_ZOOM_LEVEL: 18,
+  TIMEZONE: 'Asia/Kolkata',
+  LOCALE: 'en-IN',
+  CURRENCY_SYMBOL: '₹',
 }
 
 export const ENDPOINT = {

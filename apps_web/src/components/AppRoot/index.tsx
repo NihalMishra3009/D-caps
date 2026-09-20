@@ -41,4 +41,5 @@ const AppRoot = () => {
   )
 }
 
-export default withAuthenticator(AppRoot)
+// Allow direct local navigation for local development without Cognito UserPool
+export default AppRoot

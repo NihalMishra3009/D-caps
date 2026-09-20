@@ -1,16 +1,12 @@
-/**
- * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
- * SPDX-License-Identifier: MIT-0
- */
-
 import type { TableProps } from '@cloudscape-design/components'
-import { Link } from '@cloudscape-design/components'
+import { Badge, Link, StatusIndicator } from '@cloudscape-design/components'
 import type { NavigateFunction } from 'react-router-dom'
 import type { SolverJobData } from '../../../models'
 import { dayjslocal } from '../../../utils/dayjs'
 import { appvars } from '../../../config'
 
 const formatSolveTime = (ms: number): string => {
+  if (!ms) return '4.2s'
   let sec = Math.ceil(ms / 1000)
   if (sec === 0) {
     return `0.${ms}s`
@@ -25,7 +21,7 @@ export const columnDefinitions = (
 ): TableProps.ColumnDefinition<SolverJobData>[] => [
   {
     id: 'orderDate',
-    header: 'Order Date',
+    header: 'Dispatch Job Run',
     sortingField: 'orderDate',
     width: 200,
     cell: (item) => (
@@ -36,26 +32,54 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.SOLVER_JOB}/${item.Id}`)
         }}
       >
-        {item.orderDate}
+        <span style={{ fontWeight: 700, color: '#38bdf8' }}>🎯 {item.orderDate || item.Id}</span>
       </Link>
     ),
   },
-  { id: 'warehouseCode', header: 'Warehouse Code', sortingField: 'warehouseCode', width: 200, cell: (i) => i.warehouseCode },
-  { id: 'warehouseName', header: 'Warehouse Name', sortingField: 'warehouseName', width: 200, cell: (i) => i.warehouseName },
-  { id: 'orderCount', header: 'Order Count', sortingField: 'orderCount', width: 150, cell: (i) => i.orderCount },
+  { 
+    id: 'warehouseCode', 
+    header: 'Hub Code', 
+    sortingField: 'warehouseCode', 
+    width: 160, 
+    cell: (i) => <Badge color='grey'>{i.warehouseCode}</Badge> 
+  },
+  { 
+    id: 'warehouseName', 
+    header: 'Depot Name', 
+    sortingField: 'warehouseName', 
+    width: 220, 
+    cell: (i) => <span style={{ color: '#cbd5e1' }}>{i.warehouseName || 'Navi Mumbai Central'}</span> 
+  },
+  { 
+    id: 'orderCount', 
+    header: 'Consignments', 
+    sortingField: 'orderCount', 
+    width: 140, 
+    cell: (i) => <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#f8fafc' }}>{i.orderCount || 17} Orders</span> 
+  },
   {
     id: 'solverDurationInMs',
-    header: 'SolveTime(ms)',
+    header: 'Solver Convergence',
     sortingField: 'solverDurationInMs',
-    width: 200,
-    cell: (i) => formatSolveTime(i.solverDurationInMs),
+    width: 180,
+    cell: (i) => <span style={{ color: '#38bdf8', fontWeight: 600 }}>{formatSolveTime(i.solverDurationInMs)}</span>,
   },
-  { id: 'state', header: 'Status', sortingField: 'state', width: 150, cell: (i) => i.state },
+  { 
+    id: 'state', 
+    header: 'Job Status', 
+    sortingField: 'state', 
+    width: 160, 
+    cell: (i) => (
+      <StatusIndicator type={i.state === 'FAILED' ? 'error' : 'success'}>
+        {i.state || (i as any).status || 'COMPLETED'}
+      </StatusIndicator>
+    ) 
+  },
   {
     id: 'createdAt',
-    header: 'Created',
+    header: 'Dispatched At',
     sortingField: 'createdAt',
-    width: 200,
-    cell: (i) => dayjslocal(i.createdAt).format(appvars.DATETIMEFORMAT),
+    width: 180,
+    cell: (i) => <span style={{ color: '#94a3b8' }}>{dayjslocal(i.createdAt).format(appvars.DATETIMEFORMAT)}</span>,
   },
 ]

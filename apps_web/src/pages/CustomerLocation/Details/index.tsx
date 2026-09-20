@@ -24,7 +24,7 @@ export const Details: FunctionComponent = () => {
   const navigate = useNavigate()
   const { customerLocationId } = useParams<{ customerLocationId: string }>()
   const [{ items }, { deleteItem }] = useCustomerLocationContext()
-  const currentItem = items.find((x) => x.Id === customerLocationId)
+  const currentItem = items.find((x) => x.Id === customerLocationId || (x as any).id === customerLocationId || x.deliveryCode === customerLocationId)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const onEditClick = useCallback(() => {

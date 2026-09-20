@@ -25,7 +25,7 @@ export const Details: FunctionComponent = () => {
   const navigate = useNavigate()
   const { warehouseId } = useParams<{ warehouseId: string }>()
   const [{ items: warehouseItems }, { deleteItem }] = useWarehouseContext()
-  const currentItem = warehouseItems.find((x) => x.Id === warehouseId)
+  const currentItem = warehouseItems.find((x) => x.Id === warehouseId || (x as any).id === warehouseId || x.warehouseCode === warehouseId)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 

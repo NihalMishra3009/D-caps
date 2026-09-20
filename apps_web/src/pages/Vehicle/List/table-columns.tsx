@@ -1,10 +1,5 @@
-/**
- * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
- * SPDX-License-Identifier: MIT-0
- */
-
 import type { TableProps } from '@cloudscape-design/components'
-import { Link } from '@cloudscape-design/components'
+import { Badge, Link } from '@cloudscape-design/components'
 import type { NavigateFunction } from 'react-router-dom'
 import type { VehicleData } from '../../../models'
 import { appvars } from '../../../config'
@@ -14,9 +9,9 @@ export const columnDefinitions = (
 ): TableProps.ColumnDefinition<VehicleData>[] => [
   {
     id: 'carNo',
-    header: 'Car No.',
+    header: 'Vehicle Reg No.',
     sortingField: 'carNo',
-    width: 200,
+    width: 220,
     cell: (item) => (
       <Link
         href={`/${appvars.URL.VEHICLE}/${item.Id}`}
@@ -25,29 +20,36 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.VEHICLE}/${item.Id}`)
         }}
       >
-        {item.carNo}
+        <span style={{ fontWeight: 700, color: '#0284c7' }}>🚚 {item.carNo}</span>
       </Link>
     ),
   },
   {
     id: 'warehouseCode',
-    header: 'Department (Warehouse)',
+    header: 'Operating Hub Code',
     sortingField: 'warehouseCode',
     width: 200,
-    cell: (item) => item.warehouseCode,
+    cell: (item) => <Badge color='grey'>{item.warehouseCode}</Badge>,
   },
   {
     id: 'carGrade',
-    header: 'Grade',
+    header: 'Payload Grade',
     sortingField: 'carGrade',
-    width: 120,
-    cell: (item) => item.carGrade,
+    width: 160,
+    cell: (item) => {
+      const color = item.carGrade?.includes('5') ? 'blue' : item.carGrade?.includes('2.5') ? 'green' : 'grey'
+      return <Badge color={color as any}>{item.carGrade}</Badge>
+    },
   },
   {
     id: 'maxWeight',
-    header: 'Max Capacity',
+    header: 'Max Capacity (kg)',
     sortingField: 'maxWeight',
-    width: 150,
-    cell: (item) => item.maxWeight,
+    width: 180,
+    cell: (item) => (
+      <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0f172a' }}>
+        {Number(item.maxWeight).toLocaleString()} kg
+      </span>
+    ),
   },
 ]

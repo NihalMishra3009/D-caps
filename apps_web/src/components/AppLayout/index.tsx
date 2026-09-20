@@ -25,16 +25,27 @@ const SECTIONS: { url: string; label: string }[] = [
 ]
 
 const navigationItems: SideNavigationProps.Item[] = [
-  { type: 'link', text: 'Home', href: '/' },
+  { type: 'link', text: '🏠 Overview & Command', href: '/' },
   { type: 'divider' },
-  { type: 'link', text: 'Customer Locations', href: `/${appvars.URL.CUSTOMER_LOCATION}` },
-  { type: 'link', text: 'Warehouses', href: `/${appvars.URL.WAREHOUSE}` },
-  { type: 'link', text: 'Vehicles', href: `/${appvars.URL.VEHICLE}` },
-  { type: 'link', text: 'Orders', href: `/${appvars.URL.ORDER}` },
+  {
+    type: 'section',
+    text: 'Operations',
+    items: [
+      { type: 'link', text: '🏥 Customer Locations', href: `/${appvars.URL.CUSTOMER_LOCATION}` },
+      { type: 'link', text: '🏢 Warehouses & Hubs', href: `/${appvars.URL.WAREHOUSE}` },
+      { type: 'link', text: '🚚 Vehicles Fleet', href: `/${appvars.URL.VEHICLE}` },
+      { type: 'link', text: '📦 Consignment Orders', href: `/${appvars.URL.ORDER}` },
+    ],
+  },
   { type: 'divider' },
-  { type: 'link', text: 'Distance Cache', href: `/${appvars.URL.DISTANCE_CACHE}` },
-  { type: 'link', text: 'Solver Jobs', href: `/${appvars.URL.SOLVER_JOB}` },
-  { type: 'divider' },
+  {
+    type: 'section',
+    text: 'Optimization Engine',
+    items: [
+      { type: 'link', text: '⚡ Distance Cache Matrix', href: `/${appvars.URL.DISTANCE_CACHE}` },
+      { type: 'link', text: '🎯 Solver & Dispatch Jobs', href: `/${appvars.URL.SOLVER_JOB}` },
+    ],
+  },
 ]
 
 const buildBreadcrumbs = (pathname: string): BreadcrumbGroupProps.Item[] => {
