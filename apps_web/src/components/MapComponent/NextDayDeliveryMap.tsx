@@ -67,7 +67,7 @@ const MapViewUpdater: React.FC<{ center: [number, number]; zoom: number }> = ({ 
 export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ segments, route }) => {
   const [mapMode, setMapMode] = useState<string>('3d')
   const [markers3D, setMarkers3D] = useState<MapMarkerItem[]>([])
-  const [polylines3D, setPolylines3D] = useState<{ coordinates: [number, number][]; color?: string }[]>([])
+  const [polylines3D, setPolylines3D] = useState<{ coordinates: [number, number][]; color?: string; id?: string }[]>([])
   const [warehouses, setWarehouses] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
   const [leafletRoute, setLeafletRoute] = useState<[number, number][]>([])
@@ -132,27 +132,63 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
   }, [segments])
 
   useEffect(() => {
-    if (!route || !route.pointsEncoded) {
-      setPolylines3D([])
-      setLeafletRoute([])
-      return
+    // Priority 1: Top-level consolidated route
+    if (route && route.pointsEncoded) {
+      try {
+        const decoded = polyline.decode(route.pointsEncoded)
+        if (decoded && decoded.length > 0) {
+          setLeafletRoute(decoded.map(([lat, lng]) => [lat, lng]))
+          setPolylines3D([
+            {
+              id: 'vehicle-route-active',
+              coordinates: decoded.map(([lat, lng]) => [lng, lat]),
+              color: '#38bdf8',
+            },
+          ])
+          return
+        }
+      } catch (e) {
+        console.warn('Error decoding top-level route points, trying segment fallback', e)
+      }
     }
 
-    try {
-      const decoded = polyline.decode(route.pointsEncoded)
-      if (decoded && decoded.length > 0) {
-        setLeafletRoute(decoded.map(([lat, lng]) => [lat, lng]))
-        setPolylines3D([
-          {
-            coordinates: decoded.map(([lat, lng]) => [lng, lat]),
-            color: '#38bdf8',
-          },
-        ])
+    // Priority 2: Segment-level route fallback
+    if (segments && segments.length > 0) {
+      try {
+        const allDecodedPoints: [number, number][] = []
+        segments.forEach((seg: any) => {
+          if (seg.route?.pointsEncoded) {
+            const segDecoded = polyline.decode(seg.route.pointsEncoded)
+            if (segDecoded && segDecoded.length > 0) {
+              segDecoded.forEach(([lat, lng]) => {
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  allDecodedPoints.push([lat, lng])
+                }
+              })
+            }
+          }
+        })
+
+        if (allDecodedPoints.length > 0) {
+          setLeafletRoute(allDecodedPoints)
+          setPolylines3D([
+            {
+              id: 'vehicle-route-active',
+              coordinates: allDecodedPoints.map(([lat, lng]) => [lng, lat]),
+              color: '#38bdf8',
+            },
+          ])
+          return
+        }
+      } catch (e) {
+        console.warn('Error decoding segment routes', e)
       }
-    } catch (e) {
-      console.error('Error decoding route points', e)
     }
-  }, [route])
+
+    // Default: Empty route
+    setPolylines3D([])
+    setLeafletRoute([])
+  }, [route, segments])
 
   return (
     <Container

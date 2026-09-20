@@ -1,0 +1,68 @@
+/**
+ * Design Tokens from aws_design.md
+ * Authoritative Color Palette, Spacing Scale, Typography & Surface Tokens
+ */
+:root {
+  /* Surface & Backgrounds */
+  --bg-page: #f3f3f1;
+  --bg-surface: #ffffff;
+  --bg-surface-muted: #f8f8f7;
+  --bg-surface-hover: #f1f1ee;
+  --bg-card: #ffffff;
+
+  /* Typography Colors */
+  --text-primary: #181818;
+  --text-secondary: #707070;
+  --text-muted: #9a9a9a;
+  --text-inverse: #ffffff;
+
+  /* Borders & Dividers */
+  --border: #e5e5e2;
+  --border-strong: #d7d7d3;
+  --border-light: #ecece9;
+
+  /* Brand & Accents */
+  --accent-dark: #242424;
+  --accent-dark-hover: #333333;
+  --accent-purple: #7217f5;
+  --accent-purple-light: rgba(114, 23, 245, 0.08);
+  --accent-purple-border: rgba(114, 23, 245, 0.25);
+
+  /* Status Colors */
+  --status-success: #8fcf3f;
+  --status-success-bg: rgba(143, 207, 63, 0.12);
+  --status-warning: #d8a82e;
+  --status-warning-bg: rgba(216, 168, 46, 0.12);
+  --status-error: #d94b4b;
+  --status-error-bg: rgba(217, 75, 75, 0.12);
+  --status-info: #6e9cf5;
+  --status-info-bg: rgba(110, 156, 245, 0.12);
+
+  /* Map Container */
+  --map-bg: #eeeeeb;
+
+  /* Spacing Scale (8px Base Grid) */
+  --space-micro: 4px;
+  --space-compact: 8px;
+  --space-small: 12px;
+  --space-standard: 16px;
+  --space-section: 24px;
+  --space-large: 32px;
+  --space-major: 48px;
+  --space-hero: 64px;
+
+  /* Border Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
+
+  /* Shadows - Minimal and Restrained */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.06);
+
+  /* Transitions */
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 220ms ease-out;
+}

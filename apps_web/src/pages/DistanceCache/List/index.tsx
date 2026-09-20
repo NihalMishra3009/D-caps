@@ -54,11 +54,11 @@ export const List: FunctionComponent = () => {
   }
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <Modal
         visible={modalBuildOpen}
         onDismiss={() => { if (!rebuilding) setModalBuildOpen(false) }}
-        header='Rebuild Distance Cache'
+        header='Rebuild Distance Cache Matrix'
         footer={
           <Box float='right'>
             <SpaceBetween direction='horizontal' size='xs'>
@@ -66,19 +66,24 @@ export const List: FunctionComponent = () => {
                 Cancel
               </Button>
               <Button variant='primary' onClick={buildDistanceCache} loading={rebuilding}>
-                Rebuild
+                Rebuild Cache
               </Button>
             </SpaceBetween>
           </Box>
         }
       >
-        <FormField label='Warehouse Code' controlId='ctlWarehouseCode'>
-          <Input
-            value={reqWarehouseCode}
-            placeholder='Warehouse Code'
-            onChange={({ detail }) => setReqWarehouseCode(detail.value)}
-          />
-        </FormField>
+        <SpaceBetween size='m'>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            Enter the Warehouse Hub code to pre-calculate the GraphHopper distance-time matrix.
+          </p>
+          <FormField label='Warehouse Code' controlId='ctlWarehouseCode'>
+            <Input
+              value={reqWarehouseCode}
+              placeholder='e.g. 95001200'
+              onChange={({ detail }) => setReqWarehouseCode(detail.value)}
+            />
+          </FormField>
+        </SpaceBetween>
       </Modal>
 
       <Modal
@@ -91,48 +96,70 @@ export const List: FunctionComponent = () => {
           </Box>
         }
       >
-        Distance cache rebuild job is requested.
+        Distance cache rebuild job has been successfully submitted to the routing engine.
       </Modal>
 
-      <Table
-        header={
-          <Header
-            counter={`(${items.length})`}
-            actions={
-              <SpaceBetween direction='horizontal' size='xs'>
-                <Button iconName='refresh' onClick={() => refreshItems()} ariaLabel='Refresh' />
-                <Button onClick={() => setModalBuildOpen(true)}>Rebuild DistanceCache</Button>
-              </SpaceBetween>
+      {/* Top Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1 className='heading-page' style={{ fontSize: 22, fontWeight: 700 }}>
+            Distance Cache Matrix ({items.length})
+          </h1>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+            Pre-computed GraphHopper distance & duration matrices for instant solver convergence
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => refreshItems()} className='btn btn-secondary' title='Refresh distance matrices'>
+            Refresh
+          </button>
+          <button onClick={() => setModalBuildOpen(true)} className='btn btn-primary'>
+            Rebuild Matrix
+          </button>
+        </div>
+      </div>
+
+      {/* Main Table Card */}
+      <div
+        className='card'
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '20px 24px',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        <div style={{ overflowX: 'auto' }}>
+          <Table
+            columnDefinitions={columnDefinitions}
+            items={pageItems}
+            loading={isLoading}
+            loadingText='Loading distance matrices...'
+            sortingColumn={sorting.sortingColumn}
+            sortingDescending={sorting.sortingDescending}
+            onSortingChange={({ detail }) => sorting.onSortingChange(detail)}
+            pagination={
+              <Pagination
+                currentPageIndex={pagination.currentPageIndex}
+                pagesCount={pagination.pagesCount}
+                onChange={({ detail }) => pagination.onChange(detail)}
+              />
             }
-          >
-            DistanceCache List
-          </Header>
-        }
-        columnDefinitions={columnDefinitions}
-        items={pageItems}
-        loading={isLoading}
-        loadingText='Loading distance caches'
-        sortingColumn={sorting.sortingColumn}
-        sortingDescending={sorting.sortingDescending}
-        onSortingChange={({ detail }) => sorting.onSortingChange(detail)}
-        pagination={
-          <Pagination
-            currentPageIndex={pagination.currentPageIndex}
-            pagesCount={pagination.pagesCount}
-            onChange={({ detail }) => pagination.onChange(detail)}
+            preferences={
+              <TablePreferences
+                pageSize={preferences.pageSize}
+                onPageSizeChange={preferences.setPageSize}
+                pageSizeOptions={preferences.pageSizeOptions}
+              />
+            }
+            empty='No distance cache matrices found'
           />
-        }
-        preferences={
-          <TablePreferences
-            pageSize={preferences.pageSize}
-            onPageSizeChange={preferences.setPageSize}
-            pageSizeOptions={preferences.pageSizeOptions}
-          />
-        }
-        variant='full-page'
-        stickyHeader
-        empty='No distance caches'
-      />
-    </>
+        </div>
+      </div>
+    </div>
   )
 }
+
+export default List

@@ -3,125 +3,121 @@
  * SPDX-License-Identifier: MIT-0
  */
 
-import { useMemo, type FunctionComponent } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import {
-  AppLayout as CSAppLayout,
-  BreadcrumbGroup,
-  SideNavigation,
-  type SideNavigationProps,
-  type BreadcrumbGroupProps,
-} from '@cloudscape-design/components'
+import React, { useState, useMemo, type FunctionComponent } from 'react'
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import { appvars } from '../../config'
-import AppHeader from '../AppHeader'
+import AppSidebar from '../AppSidebar'
+import { ChevronRight } from 'lucide-react'
 
 const SECTIONS: { url: string; label: string }[] = [
   { url: appvars.URL.CUSTOMER_LOCATION, label: 'Customer Locations' },
-  { url: appvars.URL.WAREHOUSE, label: 'Warehouses' },
-  { url: appvars.URL.VEHICLE, label: 'Vehicles' },
-  { url: appvars.URL.ORDER, label: 'Orders' },
-  { url: appvars.URL.DISTANCE_CACHE, label: 'Distance Cache' },
-  { url: appvars.URL.SOLVER_JOB, label: 'Solver Jobs' },
+  { url: appvars.URL.WAREHOUSE, label: 'Warehouses & Hubs' },
+  { url: appvars.URL.VEHICLE, label: 'Vehicles Fleet' },
+  { url: appvars.URL.ORDER, label: 'Consignment Orders' },
+  { url: appvars.URL.DISTANCE_CACHE, label: 'Distance Cache Matrix' },
+  { url: appvars.URL.SOLVER_JOB, label: 'Solver & Dispatch Jobs' },
 ]
 
-const navigationItems: SideNavigationProps.Item[] = [
-  { type: 'link', text: 'Overview & Command', href: '/' },
-  { type: 'divider' },
-  {
-    type: 'section',
-    text: 'Operations',
-    items: [
-      { type: 'link', text: 'Customer Locations', href: `/${appvars.URL.CUSTOMER_LOCATION}` },
-      { type: 'link', text: 'Warehouses & Hubs', href: `/${appvars.URL.WAREHOUSE}` },
-      { type: 'link', text: 'Vehicles Fleet', href: `/${appvars.URL.VEHICLE}` },
-      { type: 'link', text: 'Consignment Orders', href: `/${appvars.URL.ORDER}` },
-    ],
-  },
-  { type: 'divider' },
-  {
-    type: 'section',
-    text: 'Optimization Engine',
-    items: [
-      { type: 'link', text: 'Distance Cache Matrix', href: `/${appvars.URL.DISTANCE_CACHE}` },
-      { type: 'link', text: 'Solver & Dispatch Jobs', href: `/${appvars.URL.SOLVER_JOB}` },
-    ],
-  },
-]
-
-const buildBreadcrumbs = (pathname: string): BreadcrumbGroupProps.Item[] => {
-  const items: BreadcrumbGroupProps.Item[] = [{ text: 'Home', href: '/' }]
-
-  const segments = pathname.split('/').filter(Boolean)
-  if (segments.length === 0) {
-    return items
-  }
-
-  const rootSegment = segments[0]
-  const section = SECTIONS.find((s) => s.url === rootSegment)
-  if (section) {
-    items.push({ text: section.label, href: `/${section.url}` })
-  } else {
-    items.push({ text: rootSegment, href: `/${rootSegment}` })
-  }
-
-  // Any subsequent segment (id, edit, etc.) appears as the current page, not a link.
-  if (segments.length > 1) {
-    const tail = segments.slice(1).join(' / ')
-    items.push({ text: tail, href: `/${segments.join('/')}` })
-  }
-
-  return items
-}
-
-const AppLayout: FunctionComponent = () => {
+export const AppLayout: FunctionComponent = () => {
   const location = useLocation()
-  const navigate = useNavigate()
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  const breadcrumbs = useMemo<BreadcrumbGroupProps.Item[]>(
-    () => buildBreadcrumbs(location.pathname),
-    [location.pathname],
-  )
-
-  const activeHref = useMemo(() => {
+  const breadcrumbs = useMemo(() => {
     const segments = location.pathname.split('/').filter(Boolean)
-    return segments.length === 0 ? '/' : `/${segments[0]}`
+    if (segments.length === 0) {
+      return []
+    }
+
+    const list = [{ label: 'Overview', href: '/' }]
+    const rootSegment = segments[0]
+    const section = SECTIONS.find((s) => s.url === rootSegment)
+
+    if (section) {
+      list.push({ label: section.label, href: `/${section.url}` })
+    } else {
+      list.push({ label: rootSegment, href: `/${rootSegment}` })
+    }
+
+    if (segments.length > 1) {
+      const tail = segments.slice(1).join(' / ')
+      list.push({ label: tail, href: `/${segments.join('/')}` })
+    }
+
+    return list
   }, [location.pathname])
 
-  const navigation = (
-    <SideNavigation
-      header={{ text: 'Menu', href: '/' }}
-      activeHref={activeHref}
-      items={navigationItems}
-      onFollow={(event) => {
-        if (!event.detail.external) {
-          event.preventDefault()
-          navigate(event.detail.href)
-        }
-      }}
-    />
-  )
+  const isHome = location.pathname === '/'
 
   return (
-    <>
-      <AppHeader />
-      <CSAppLayout
-        headerSelector='#app-header'
-        navigation={navigation}
-        breadcrumbs={
-          <BreadcrumbGroup
-            items={breadcrumbs}
-            onFollow={(event) => {
-              if (!event.detail.external) {
-                event.preventDefault()
-                navigate(event.detail.href)
-              }
-            }}
-          />
-        }
-        content={<Outlet />}
-        toolsHide
+    <div style={{ minHeight: '100vh', display: 'flex', backgroundColor: 'var(--bg-page)' }}>
+      {/* Left Sidebar (Reference Image 1) */}
+      <AppSidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-    </>
+
+      {/* Main Viewport */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowX: 'hidden' }}>
+        {/* Top Minimal Breadcrumb Bar */}
+        {!isHome && breadcrumbs.length > 0 && (
+          <div
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              borderBottom: '1px solid var(--border)',
+              padding: '12px 28px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12,
+                color: 'var(--text-muted)',
+              }}
+            >
+              {breadcrumbs.map((crumb, idx) => {
+                const isLast = idx === breadcrumbs.length - 1
+                return (
+                  <React.Fragment key={crumb.href + idx}>
+                    {idx > 0 && <ChevronRight size={13} color='var(--text-muted)' />}
+                    {isLast ? (
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{crumb.label}</span>
+                    ) : (
+                      <Link
+                        to={crumb.href}
+                        style={{
+                          color: 'var(--text-secondary)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        {crumb.label}
+                      </Link>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Page Content Container with Smooth Animation */}
+        <main
+          style={{
+            flex: 1,
+            width: '100%',
+            maxWidth: 1680,
+            margin: '0 auto',
+            padding: '24px 32px 64px',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div key={location.pathname} className='page-fade-in'>
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
   )
 }
 

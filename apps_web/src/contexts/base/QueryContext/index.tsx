@@ -46,7 +46,7 @@ export function createQueryProvider<TData, TService extends IQuery<TData>>(
 
   if (queryProviderStore[key] == null) {
     const _queryProvider: QueryProviderComponent = ({ children }) => {
-      const [state, updateState] = useImmer<State<TData>>({
+      const [state, updateState] = useImmer<State<any>>({
         items: [],
         isLoading: false,
       })
@@ -60,7 +60,7 @@ export function createQueryProvider<TData, TService extends IQuery<TData>>(
         })
         const items = await service.list()
         updateState((draft) => {
-          draft.items = castDraft(items)
+          draft.items = castDraft(items) as any
           draft.isLoading = false
         })
       }, [updateState])
@@ -74,9 +74,9 @@ export function createQueryProvider<TData, TService extends IQuery<TData>>(
           updateState((draft) => {
             const index = draft.items.findIndex((x) => idSelect(x as TData) === idSelect(item))
             if (index < 0) {
-              draft.items.push(castDraft(item))
+              draft.items.push(castDraft(item) as any)
             } else {
-              draft.items[index] = castDraft(item)
+              draft.items[index] = castDraft(item) as any
             }
             draft.isLoading = false
           })
@@ -92,7 +92,7 @@ export function createQueryProvider<TData, TService extends IQuery<TData>>(
         () => ({
           setItems: (items) => {
             updateState((draft) => {
-              draft.items = castDraft(items)
+              draft.items = castDraft(items) as any
             })
           },
           refreshItems: () => {

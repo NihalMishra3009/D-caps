@@ -49,7 +49,7 @@ export function createDataProvider<TData, TService extends IService<TData>>(
 
   if (dataProviderStore[key] == null) {
     const _dataProvider: DataProviderComponent = ({ children }) => {
-      const [state, updateState] = useImmer<State<TData>>({
+      const [state, updateState] = useImmer<State<any>>({
         items: [],
         isLoading: false,
       })
@@ -77,9 +77,9 @@ export function createDataProvider<TData, TService extends IService<TData>>(
           updateState((draft) => {
             const index = draft.items.findIndex((x) => idSelect(x as TData) === idSelect(item))
             if (index < 0) {
-              draft.items.push(castDraft(item))
+              draft.items.push(castDraft(item) as any)
             } else {
-              draft.items[index] = castDraft(item)
+              draft.items[index] = castDraft(item) as any
             }
             draft.isLoading = false
           })
@@ -95,7 +95,7 @@ export function createDataProvider<TData, TService extends IService<TData>>(
         () => ({
           setItems: (items) => {
             updateState((draft) => {
-              draft.items = castDraft(items)
+              draft.items = castDraft(items) as any
             })
           },
           refreshItems: () => {
@@ -110,7 +110,7 @@ export function createDataProvider<TData, TService extends IService<TData>>(
             })
             const newItem = await service.create(item)
             updateState((draft) => {
-              draft.items.push(castDraft(newItem))
+              draft.items.push(castDraft(newItem) as any)
               draft.isLoading = false
             })
           },
@@ -120,7 +120,7 @@ export function createDataProvider<TData, TService extends IService<TData>>(
               if (index < 0) {
                 throw new Error(`Failed to find item with id ${idSelect(item)}`)
               }
-              draft.items[index] = castDraft(item)
+              draft.items[index] = castDraft(item) as any
             })
 
             if (persist) {
@@ -129,7 +129,7 @@ export function createDataProvider<TData, TService extends IService<TData>>(
                 updateState((draft) => {
                   const index = draft.items.findIndex((a) => idSelect(a as TData) === idSelect(updated))
                   if (index >= 0) {
-                    draft.items[index] = castDraft(updated)
+                    draft.items[index] = castDraft(updated) as any
                   }
                 })
               })()
