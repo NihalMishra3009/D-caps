@@ -206,7 +206,7 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
               <Marker key={`warehouse-${idx}`} position={[r.latitude, r.longitude]} icon={houseIcon}>
                 <Popup>
                   <div>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#ef4444' }}>🏢 Distribution Depot Hub</h4>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#ef4444' }}>Distribution Depot Hub</h4>
                     <div style={{ maxWidth: 300, maxHeight: 180, overflow: 'auto' }}>
                       <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
                     </div>
@@ -219,7 +219,7 @@ export const NextDayDeliveryMap: React.FC<NextDayDeliveryMapInputProps> = ({ seg
               <Marker key={`customer-${idx}`} position={[r.latitude, r.longitude]} icon={customerIcon}>
                 <Popup>
                   <div>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#8b5cf6' }}>🏥 {r.deliveryName || 'Medical Center'}</h4>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#8b5cf6' }}>{r.deliveryName || 'Medical Center'}</h4>
                     <div style={{ maxWidth: 300, maxHeight: 180, overflow: 'auto' }}>
                       <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
                     </div>

@@ -20,7 +20,7 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.VEHICLE}/${item.Id}`)
         }}
       >
-        <span style={{ fontWeight: 700, color: '#0284c7' }}>🚚 {item.carNo}</span>
+        <span style={{ fontWeight: 700, color: '#0284c7' }}>{item.carNo}</span>
       </Link>
     ),
   },

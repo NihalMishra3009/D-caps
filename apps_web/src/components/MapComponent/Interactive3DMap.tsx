@@ -303,7 +303,7 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
         const isOrg = marker.type === 'origin'
 
         const badgeColor = isWh ? '#ef4444' : isOrg ? '#10b981' : isDest ? '#0284c7' : '#a855f7'
-        const iconSvg = isWh ? '🏢' : isOrg ? '🚚' : isDest ? '📦' : '🏥'
+        const iconSvg = ''
 
         el.innerHTML = `
           <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: auto;">
@@ -338,7 +338,6 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
               transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
               white-space: nowrap;
             " class="marker-pill">
-              <span style="font-size: 13px;">${iconSvg}</span>
               <span>${marker.title}</span>
               <div style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor}; box-shadow: 0 0 8px ${badgeColor};"></div>
             </div>
@@ -636,9 +635,6 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '1.2rem' }}>
-                {selectedMarker.type === 'warehouse' ? '🏢' : selectedMarker.type === 'origin' ? '🚚' : '🏥'}
-              </span>
               <strong style={{ fontSize: '0.9rem', color: '#38bdf8' }}>{selectedMarker.title}</strong>
             </div>
             <button
@@ -648,10 +644,11 @@ export const Interactive3DMap: React.FC<Interactive3DMapProps> = ({
                 border: 'none',
                 color: '#94a3b8',
                 cursor: 'pointer',
-                fontSize: '1rem',
+                fontSize: '0.9rem',
+                fontWeight: 'bold',
               }}
             >
-              ✕
+              X
             </button>
           </div>
           <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: 6 }}>

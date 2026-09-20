@@ -211,7 +211,7 @@ const MapComponent: React.FC<MapInputProps> = ({ orders, geofences, warehouses, 
               <Marker key={`warehouse-${idx}`} position={[r.latitude, r.longitude]} icon={houseIcon}>
                 <Popup>
                   <div>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#e53935' }}>🏢 Warehouse Hub</h4>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#e53935' }}>Warehouse Hub</h4>
                     <div style={{ maxWidth: 350, maxHeight: 220, overflow: 'auto' }}>
                       <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
                     </div>
@@ -224,7 +224,7 @@ const MapComponent: React.FC<MapInputProps> = ({ orders, geofences, warehouses, 
               <Marker key={`customer-${idx}`} position={[r.latitude, r.longitude]} icon={customerIcon}>
                 <Popup>
                   <div>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#8e24aa' }}>🏥 Customer / Hospital</h4>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#8e24aa' }}>Customer / Hospital</h4>
                     <div style={{ maxWidth: 350, maxHeight: 220, overflow: 'auto' }}>
                       <ReactMarkdown>{`\`\`\`json\n${JSON.stringify(r, null, 2)}\n\`\`\``}</ReactMarkdown>
                     </div>

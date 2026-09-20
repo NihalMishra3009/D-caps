@@ -21,7 +21,7 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.WAREHOUSE}/${item.Id}`)
         }}
       >
-        <span style={{ fontWeight: 700, color: '#0284c7' }}>🏢 {item.warehouseName}</span>
+        <span style={{ fontWeight: 700, color: '#0284c7' }}>{item.warehouseName}</span>
       </Link>
     ),
   },

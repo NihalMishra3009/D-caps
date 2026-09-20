@@ -10,7 +10,7 @@ export const columnDefinitions: TableProps.ColumnDefinition<DeliveryJobData>[] =
     header: 'Vehicle Reg', 
     sortingField: 'carNo', 
     width: 130, 
-    cell: (i) => <span style={{ fontWeight: 700, color: '#38bdf8' }}>🚚 {i.carNo}</span> 
+    cell: (i) => <span style={{ fontWeight: 700, color: '#38bdf8' }}>{i.carNo}</span> 
   },
   { 
     id: 'deliveryTimeGroup', 
@@ -93,7 +93,7 @@ export const columnDefinitionsSegments: TableProps.ColumnDefinition<selectDelive
     id: 'deliveryName', 
     header: 'Destination Medical Facility', 
     width: 250, 
-    cell: (i) => <span style={{ fontWeight: 600, color: '#f8fafc' }}>🏥 {i.deliveryName}</span> 
+    cell: (i) => <span style={{ fontWeight: 600, color: '#f8fafc' }}>{i.deliveryName}</span> 
   },
   { 
     id: 'deliveryTimeGroup', 

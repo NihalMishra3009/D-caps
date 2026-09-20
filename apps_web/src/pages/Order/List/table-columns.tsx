@@ -20,7 +20,7 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.ORDER}/${item.Id}`)
         }}
       >
-        <span style={{ fontWeight: 700, color: '#0284c7' }}>📦 {item.orderNo || item.Id}</span>
+        <span style={{ fontWeight: 700, color: '#0284c7' }}>{item.orderNo || item.Id}</span>
       </Link>
     ),
   },
@@ -50,7 +50,7 @@ export const columnDefinitions = (
     header: 'Hospital Destination', 
     sortingField: 'deliveryName', 
     width: 320, 
-    cell: (i) => <span style={{ fontWeight: 600, color: '#0f172a' }}>🏥 {i.deliveryName || (i as any).customerName}</span> 
+    cell: (i) => <span style={{ fontWeight: 600, color: '#0f172a' }}>{i.deliveryName || (i as any).customerName}</span> 
   },
   { 
     id: 'sumWeight', 

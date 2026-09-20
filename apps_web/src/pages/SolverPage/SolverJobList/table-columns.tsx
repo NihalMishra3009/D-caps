@@ -32,7 +32,7 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.SOLVER_JOB}/${item.Id}`)
         }}
       >
-        <span style={{ fontWeight: 700, color: '#38bdf8' }}>🎯 {item.orderDate || item.Id}</span>
+        <span style={{ fontWeight: 700, color: '#38bdf8' }}>{item.orderDate || item.Id}</span>
       </Link>
     ),
   },

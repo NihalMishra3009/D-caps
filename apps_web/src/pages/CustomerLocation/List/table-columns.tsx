@@ -21,7 +21,7 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.CUSTOMER_LOCATION}/${item.Id}`)
         }}
       >
-        <span style={{ fontWeight: 700, color: '#0284c7' }}>🏥 {item.deliveryName}</span>
+        <span style={{ fontWeight: 700, color: '#0284c7' }}>{item.deliveryName}</span>
       </Link>
     ),
   },

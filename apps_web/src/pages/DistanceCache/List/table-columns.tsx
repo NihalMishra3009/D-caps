@@ -19,7 +19,7 @@ export const columnDefinitions = (
           navigate(`/${appvars.URL.DISTANCE_CACHE}/${item.Id}`)
         }}
       >
-        <span style={{ fontWeight: 700, color: '#38bdf8' }}>⚡ {item.Id}</span>
+        <span style={{ fontWeight: 700, color: '#38bdf8' }}>{item.Id}</span>
       </Link>
     ),
   },
